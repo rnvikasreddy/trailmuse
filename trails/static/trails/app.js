@@ -61,7 +61,7 @@
   map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 90 }), "bottom-right");
   function padding() { return phone() ? { top: 70, bottom: window.innerHeight * 0.5, left: 20, right: 20 } : { top: 70, bottom: 30, left: 460, right: 80 }; }
 
-  var BLUE = "#1d40b0", NAVY = "#13265f", GOLD = "#e0ac25", SEL_GREEN = "#74d84c", SEL_EDGE = "#1f5f24";
+  var BRAND = "#3fbf5a", INK = "#10261a", SEL_GREEN = "#74d84c", SEL_EDGE = "#1f5f24";
 
   // Map icons drawn on a canvas, so they need no image files and stay sharp on any screen.
   function icon(size, draw) {
@@ -90,7 +90,7 @@
     };
     Object.keys(icons).forEach(function (k) { if (!map.hasImage(k)) map.addImage(k, icons[k].image, icons[k].opts); });
   }
-  var DIFF_COLOR = ["match", ["get", "difficulty"], "easy", "#2f9e5b", "moderate", "#e09a12", "hard", "#d64533", BLUE];
+  var DIFF_COLOR = ["match", ["get", "difficulty"], "easy", "#2f9e5b", "moderate", "#e09a12", "hard", "#d64533", BRAND];
   var EMPTY = { type: "FeatureCollection", features: [] };
   var lastLines = EMPTY, terrainOn = false, hoverId = null;
   var hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: "map-tip" });
@@ -123,18 +123,18 @@
     if (glyphs && font) {
       map.addLayer({ id: "line-labels", type: "symbol", source: "lines", minzoom: 12.5, layout: {
         "symbol-placement": "line", "text-field": ["get", "name"], "text-font": font, "text-size": 12, "text-letter-spacing": 0.02, "symbol-spacing": 320
-      }, paint: { "text-color": NAVY, "text-halo-color": "#ffffff", "text-halo-width": 1.8 } });
+      }, paint: { "text-color": INK, "text-halo-color": "#ffffff", "text-halo-width": 1.8 } });
     }
     map.addLayer({ id: "clusters", type: "circle", source: "starts", filter: ["has", "point_count"], paint: {
-      "circle-color": BLUE, "circle-opacity": 0.92, "circle-stroke-color": "#ffffff", "circle-stroke-width": 3,
+      "circle-color": BRAND, "circle-opacity": 0.92, "circle-stroke-color": "#ffffff", "circle-stroke-width": 3,
       "circle-radius": ["step", ["get", "point_count"], 15, 10, 19, 50, 24] } });
     if (glyphs && font) {
       map.addLayer({ id: "cluster-count", type: "symbol", source: "starts", filter: ["has", "point_count"], layout: {
         "text-field": ["get", "point_count_abbreviated"], "text-font": font, "text-size": 13, "text-allow-overlap": true
-      }, paint: { "text-color": "#ffffff" } });
+      }, paint: { "text-color": "#0d3319" } });
     }
     map.addLayer({ id: "starts", type: "circle", source: "starts", filter: ["!", ["has", "point_count"]], paint: {
-      "circle-color": BLUE, "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5,
+      "circle-color": BRAND, "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5,
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 5, 14, 8.5] } });
     var arrows = { "symbol-placement": "line", "symbol-spacing": 150, "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "map" };
     map.addLayer({ id: "sel-arrows", type: "symbol", source: "selected-path", minzoom: 10, layout: Object.assign({ "icon-image": "arrow-fwd", "icon-offset": [0, 0] }, arrows) });
