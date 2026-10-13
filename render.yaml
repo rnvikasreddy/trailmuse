@@ -1,6 +1,6 @@
 # Render Blueprint: New > Blueprint in the Render dashboard, pick this repo.
 # Render asks for MAPTILER_KEY on the first deploy. The onrender.com address is allowed
-# automatically; add your own domain to ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS later.
+# automatically; your own domain goes in ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS below.
 services:
   - type: web
     name: trailmuse
@@ -23,7 +23,9 @@ services:
           name: trailmuse-db
           property: connectionString
       - key: ALLOWED_HOSTS
-        value: localhost
+        value: stigrr.com,www.stigrr.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://stigrr.com,https://www.stigrr.com
       - key: MAPTILER_KEY
         sync: false
 databases:
