@@ -87,7 +87,9 @@ def filtered_trails(request):
 
 @require_GET
 def api_trails(request):
-    qs = rating_summary(filtered_trails(request)).annotate(save_count=Count("saves", distinct=True))
+    # The list never needs geometry or profiles; loading them (and big park outlines) made wide areas slow.
+    qs = filtered_trails(request).defer("geom", "profile", "osm_tags", "description", "park__geom")
+    qs = rating_summary(qs).annotate(save_count=Count("saves", distinct=True))
     near = request.GET.get("near")
     if near:
         try:
