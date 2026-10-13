@@ -43,6 +43,8 @@ def trail_detail(t, user=None, saved=False):
         "max_elev_ft": round(t.max_elev_m * geo.FT_PER_M) if t.max_elev_m is not None else None,
         "geometry": json.loads(t.geom.geojson) if t.geom else None,
         "bbox": list(t.geom.extent) if t.geom else None,
+        # The pieces chained into one walkable line from the trailhead, for direction arrows on the map.
+        "path": [[round(x, 6), round(y, 6)] for x, y in t.main_path()] if t.geom else None,
         "muse_labels": [MUSE_LABELS.get(m, m) for m in t.muses],
         "osm_url": f"https://www.openstreetmap.org/{t.osm_type}/{t.osm_id}" if t.osm_id else "",
         "reviews": [review(r) for r in t.reviews.select_related("user")[:20]],

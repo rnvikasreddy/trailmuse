@@ -61,7 +61,35 @@
   map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 90 }), "bottom-right");
   function padding() { return phone() ? { top: 70, bottom: window.innerHeight * 0.5, left: 20, right: 20 } : { top: 70, bottom: 30, left: 460, right: 80 }; }
 
-  var BLUE = "#1d40b0", NAVY = "#13265f", GOLD = "#e0ac25";
+  var BLUE = "#1d40b0", NAVY = "#13265f", GOLD = "#e0ac25", SEL_GREEN = "#74d84c", SEL_EDGE = "#1f5f24";
+
+  // Map icons drawn on a canvas, so they need no image files and stay sharp on any screen.
+  function icon(size, draw) {
+    var px = 2, c = document.createElement("canvas"); c.width = c.height = size * px;
+    var g = c.getContext("2d"); g.scale(px, px); draw(g, size);
+    return { image: g.getImageData(0, 0, size * px, size * px), opts: { pixelRatio: px } };
+  }
+  function arrowIcon(dir) {
+    return icon(22, function (g, s) {
+      g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 1.5, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill();
+      g.lineWidth = 2; g.strokeStyle = SEL_EDGE; g.stroke();
+      g.save(); g.translate(s / 2, s / 2); g.scale(dir, 1);
+      g.beginPath(); g.moveTo(-5, 0); g.lineTo(4.5, 0); g.moveTo(0.5, -4); g.lineTo(4.5, 0); g.lineTo(0.5, 4);
+      g.lineWidth = 2.2; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#16301b"; g.stroke(); g.restore();
+    });
+  }
+  function addIcons() {
+    var icons = {
+      "arrow-fwd": arrowIcon(1), "arrow-back": arrowIcon(-1),
+      trailhead: icon(26, function (g, s) {
+        var r = s / 2 - 2;
+        g.beginPath(); g.arc(s / 2, s / 2, r + 1.5, 0, Math.PI * 2); g.fillStyle = "#fff"; g.fill();
+        g.beginPath(); g.moveTo(s / 2, s / 2); g.arc(s / 2, s / 2, r, Math.PI / 2, Math.PI * 1.5); g.fillStyle = "#16301b"; g.fill();
+        g.beginPath(); g.moveTo(s / 2, s / 2); g.arc(s / 2, s / 2, r, -Math.PI / 2, Math.PI / 2); g.fillStyle = SEL_GREEN; g.fill();
+      })
+    };
+    Object.keys(icons).forEach(function (k) { if (!map.hasImage(k)) map.addImage(k, icons[k].image, icons[k].opts); });
+  }
   var DIFF_COLOR = ["match", ["get", "difficulty"], "easy", "#2f9e5b", "moderate", "#e09a12", "hard", "#d64533", BLUE];
   var EMPTY = { type: "FeatureCollection", features: [] };
   var lastLines = EMPTY, terrainOn = false, hoverId = null;
@@ -79,6 +107,7 @@
     map.addSource("starts", { type: "geojson", data: EMPTY, cluster: true, clusterMaxZoom: 11, clusterRadius: 44 });
     map.addSource("selected", { type: "geojson", data: EMPTY });
     map.addSource("selected-start", { type: "geojson", data: EMPTY });
+    map.addSource("selected-path", { type: "geojson", data: EMPTY });
     if (KEY) map.addSource("terrain", { type: "raster-dem", url: "https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=" + encodeURIComponent(KEY), tileSize: 256 });
 
     map.addLayer({ id: "lines-case", type: "line", source: "lines", layout: round, paint: {
@@ -87,8 +116,10 @@
     map.addLayer({ id: "lines", type: "line", source: "lines", layout: round, paint: {
       "line-color": DIFF_COLOR,
       "line-width": ["interpolate", ["linear"], ["zoom"], 9, ["case", hover, 3.5, 1.6], 13, ["case", hover, 6, 3.2], 16, ["case", hover, 8, 5]] } });
-    map.addLayer({ id: "selected-case", type: "line", source: "selected", layout: round, paint: { "line-color": NAVY, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 7, 16, 12] } });
-    map.addLayer({ id: "selected-line", type: "line", source: "selected", layout: round, paint: { "line-color": GOLD, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 4, 16, 7] } });
+    // The open trail, drawn like AllTrails: a bright green line with a dark edge, direction arrows and a trailhead marker.
+    addIcons();
+    map.addLayer({ id: "selected-case", type: "line", source: "selected", layout: round, paint: { "line-color": SEL_EDGE, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 8, 16, 14] } });
+    map.addLayer({ id: "selected-line", type: "line", source: "selected", layout: round, paint: { "line-color": SEL_GREEN, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 4.5, 16, 8] } });
     if (glyphs && font) {
       map.addLayer({ id: "line-labels", type: "symbol", source: "lines", minzoom: 12.5, layout: {
         "symbol-placement": "line", "text-field": ["get", "name"], "text-font": font, "text-size": 12, "text-letter-spacing": 0.02, "symbol-spacing": 320
@@ -105,8 +136,11 @@
     map.addLayer({ id: "starts", type: "circle", source: "starts", filter: ["!", ["has", "point_count"]], paint: {
       "circle-color": BLUE, "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5,
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 5, 14, 8.5] } });
-    map.addLayer({ id: "selected-start", type: "circle", source: "selected-start", paint: {
-      "circle-color": GOLD, "circle-stroke-color": NAVY, "circle-stroke-width": 3, "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 8, 14, 12] } });
+    var arrows = { "symbol-placement": "line", "symbol-spacing": 150, "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "map" };
+    map.addLayer({ id: "sel-arrows", type: "symbol", source: "selected-path", minzoom: 10, layout: Object.assign({ "icon-image": "arrow-fwd", "icon-offset": [0, 0] }, arrows) });
+    map.addLayer({ id: "sel-arrows-back", type: "symbol", source: "selected-path", minzoom: 10, filter: ["==", ["get", "route"], "out_and_back"],
+      layout: Object.assign({ "icon-image": "arrow-back" }, arrows, { "icon-offset": [26, 0] }) });
+    map.addLayer({ id: "selected-start", type: "symbol", source: "selected-start", layout: { "icon-image": "trailhead", "icon-allow-overlap": true, "icon-ignore-placement": true } });
     setStarts();
     setSelected(state.trail);
     if (terrainOn) map.setTerrain({ source: "terrain", exaggeration: 1.4 });
@@ -148,6 +182,8 @@
     if (!map.getSource("selected")) return;
     map.getSource("selected").setData(t && t.geometry ? { type: "Feature", properties: {}, geometry: t.geometry } : EMPTY);
     map.getSource("selected-start").setData(t ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [t.lon, t.lat] } } : EMPTY);
+    var path = t && t.path && t.path.length > 1 ? { type: "Feature", properties: { route: t.route_type }, geometry: { type: "LineString", coordinates: t.path } } : EMPTY;
+    map.getSource("selected-path").setData(path);
   }
 
   // Base map picker and 3D terrain
