@@ -221,6 +221,23 @@ class PhotoTests(TestCase):
         self.assertEqual(detail["photos"][0]["by"], "Jo Hiker")
         self.assertEqual(Photo.objects.count(), 1)
 
+        class FakeNPS(FakeCommons):
+            def get(self, url, params=None, timeout=None):
+                lon, lat = self.near
+                if url.endswith("/places"):
+                    return FakeResponse({"total": "2", "data": [
+                        {"title": "Ridge Overlook", "latitude": str(lat), "longitude": str(lon), "url": "https://www.nps.gov/x",
+                         "images": [{"url": "https://www.nps.gov/ridge.jpg", "credit": "NPS/Ann", "altText": "Ridge"}]},
+                        {"title": "Private shot", "latitude": str(lat), "longitude": str(lon),
+                         "images": [{"url": "https://www.nps.gov/c.jpg", "credit": "© A Photographer"}]}]})
+                return FakeResponse({"total": "0", "data": []})
+
+        with mock.patch.object(photos.requests, "Session", return_value=FakeNPS(near)), mock.patch.dict(os.environ, {"NPS_API_KEY": "k"}):
+            call_command("fetch_photos", "--nps-only", stdout=io.StringIO())
+        first = ridge.photos.all()[0]
+        self.assertEqual((first.source, first.credit, first.license), ("nps", "NPS/Ann", "Public domain"))
+        self.assertEqual(ridge.photos.count(), 2)
+
 
 class ApiTests(TestCase):
     @classmethod

@@ -23,11 +23,13 @@ class Command(BaseCommand):
         parser.add_argument("--bbox", help="only trails starting inside west,south,east,north")
         parser.add_argument("--redo", action="store_true", help="look again at trails checked before")
         parser.add_argument("--reset", action="store_true", help="first remove all found (non-upload) photos and check every trail again")
+        parser.add_argument("--nps-only", action="store_true",
+                            help="only add National Park Service photos, to every trail near an NPS place or in a national park")
         parser.add_argument("--max-minutes", type=float, default=0, help="stop cleanly after this long (0 = no limit)")
 
     def handle(self, *args, **opts):
         started = time.monotonic()
-        commons = photos.Commons()
+        commons = None if opts["nps_only"] else photos.Commons()
         nps_places = nps_parks = None
         key = os.environ.get("NPS_API_KEY")
         if key:
@@ -35,6 +37,9 @@ class Command(BaseCommand):
             places = nps.places()
             nps_places, nps_parks = photos.PointGrid(places), nps.parks()
             self.stdout.write(f"NPS: {len(places)} places and {len(nps_parks)} parks with public-domain photos")
+        elif opts["nps_only"]:
+            self.stdout.write(self.style.ERROR("--nps-only needs NPS_API_KEY"))
+            return
         else:
             self.stdout.write("NPS_API_KEY is not set; using Wikimedia Commons only")
 
@@ -43,15 +48,20 @@ class Command(BaseCommand):
             Trail.objects.exclude(photos_checked_at=None).update(photos_checked_at=None)
             self.stdout.write(f"Removed {removed} found photos; checking every trail again")
         qs = Trail.objects.filter(is_published=True)
-        if not opts["redo"]:
+        if not (opts["redo"] or opts["nps_only"]):
             qs = qs.filter(photos_checked_at__isnull=True)
         if opts["bbox"]:
             box = Polygon.from_bbox(tuple(float(x) for x in opts["bbox"].split(",")))
             box.srid = 4326
             qs = qs.filter(start__within=box)
+        if opts["nps_only"]:
+            near_places = {(math.floor(pt[0] / CELL) + dx, math.floor(pt[1] / CELL) + dy) for pt, _ in places for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
         cells = defaultdict(list)
-        for pk, start in qs.values_list("id", "start").iterator():
-            cells[(math.floor(start.x / CELL), math.floor(start.y / CELL))].append(pk)
+        for pk, start, park in qs.values_list("id", "start", "park__name").iterator():
+            cell = (math.floor(start.x / CELL), math.floor(start.y / CELL))
+            if opts["nps_only"] and cell not in near_places and (park or "").strip().lower() not in nps_parks:
+                continue
+            cells[cell].append(pk)
         self.stdout.write(f"{sum(len(v) for v in cells.values())} trails to check in {len(cells)} map squares")
 
         done = added = with_photos = 0
@@ -73,7 +83,7 @@ class Command(BaseCommand):
 
     def do_cell(self, commons, nps_places, nps_parks, cx, cy, ids):
         trails = list(Trail.objects.filter(id__in=ids).select_related("park").only("id", "name", "geom", "start", "park__name"))
-        found = commons.nearby((cx + 0.5) * CELL, (cy + 0.5) * CELL)
+        found = commons.nearby((cx + 0.5) * CELL, (cy + 0.5) * CELL) if commons else []
         grid = photos.PointGrid(found)
         paths = {t.id: t.main_path() or [(t.start.x, t.start.y)] for t in trails}
         candidates = {t.id: grid.nearest(paths[t.id])[:8] for t in trails}
@@ -92,9 +102,11 @@ class Command(BaseCommand):
             for p in chosen:
                 if p["remote_url"] not in have[t.id] and all(p["remote_url"] != q["remote_url"] for q in picked):
                     picked.append(p)
-            picked = picked[: max(0, photos.PER_TRAIL - len(have[t.id]))]
+            # A later NPS-only pass may add park photos on top of Commons ones; they show first, being newer.
+            picked = picked[: photos.PER_TRAIL if commons is None else max(0, photos.PER_TRAIL - len(have[t.id]))]
             new += [Photo(trail=t, rank=1, **{k: v for k, v in p.items() if k != "scenic"}) for p in picked]
             with_photos += bool(picked or have[t.id])
         Photo.objects.bulk_create(new)
-        Trail.objects.filter(id__in=ids).update(photos_checked_at=timezone.now())
+        if commons is not None:
+            Trail.objects.filter(id__in=ids).update(photos_checked_at=timezone.now())
         return len(new), with_photos

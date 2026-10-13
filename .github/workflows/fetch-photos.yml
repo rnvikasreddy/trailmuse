@@ -12,6 +12,10 @@ on:
         description: Remove the photos found so far and check every trail again
         type: boolean
         default: false
+      nps_only:
+        description: Only add National Park Service photos (run once after adding NPS_API_KEY)
+        type: boolean
+        default: false
 
 jobs:
   photos:
@@ -39,4 +43,5 @@ jobs:
           sudo apt-get install -y --no-install-recommends gdal-bin libproj-dev
           pip install -r requirements.txt
       - name: Find photos (round ${{ matrix.round }})
-        run: python manage.py fetch_photos --max-minutes 330 ${{ inputs.reset && matrix.round == 1 && '--reset' || '' }}
+        if: ${{ !(inputs.nps_only && matrix.round > 1) }}  # the NPS pass is quick; one round does it
+        run: python manage.py fetch_photos --max-minutes 330 ${{ inputs.reset && matrix.round == 1 && '--reset' || '' }} ${{ inputs.nps_only && '--nps-only' || '' }}
