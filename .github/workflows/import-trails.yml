@@ -1,0 +1,65 @@
+# Loads trails for US states from OpenStreetMap (Geofabrik extracts) plus NASA elevation
+# into the live database. Runs only when started by hand: Actions > Import trails > Run workflow.
+#
+# Needs one repository secret, RENDER_DATABASE_URL: the "External Database URL" from the
+# Render dashboard (trailmuse-db > Connect > External).
+name: Import trails
+
+on:
+  workflow_dispatch:
+    inputs:
+      states:
+        description: 'Geofabrik state names, comma separated (e.g. "california,oregon"), or "all"'
+        required: true
+        default: all
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      states: ${{ steps.list.outputs.states }}
+    steps:
+      - id: list
+        env:
+          STATES: ${{ inputs.states }}
+        run: |
+          ALL="alabama alaska arizona arkansas california colorado connecticut delaware district-of-columbia florida georgia hawaii idaho illinois indiana iowa kansas kentucky louisiana maine maryland massachusetts michigan minnesota mississippi missouri montana nebraska nevada new-hampshire new-jersey new-mexico new-york north-carolina north-dakota ohio oklahoma oregon pennsylvania rhode-island south-carolina south-dakota tennessee texas utah vermont virginia washington west-virginia wisconsin wyoming puerto-rico"
+          if [ "$STATES" = "all" ]; then LIST="$ALL"; else LIST=$(echo "$STATES" | tr ',' ' '); fi
+          for s in $LIST; do
+            case " $ALL " in *" $s "*) ;; *) echo "::error::Unknown state '$s'. Use Geofabrik names like new-york."; exit 1;; esac
+          done
+          echo "states=$(printf '%s\n' $LIST | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
+
+  import:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      # One state at a time: new trails get unique web addresses, and parallel runs could pick the same one.
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        state: ${{ fromJson(needs.plan.outputs.states) }}
+    env:
+      DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+      DEBUG: "0"
+      SECRET_KEY: import-job-${{ github.run_id }}-not-for-web
+      ELEVATION_DIR: ${{ github.workspace }}/srtm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gdal-bin libproj-dev osmium-tool
+          pip install -r requirements.txt
+      - name: Check the database secret
+        run: |
+          if [ -z "$DATABASE_URL" ]; then echo "::error::Add the RENDER_DATABASE_URL repository secret first."; exit 1; fi
+      - name: Download ${{ matrix.state }}
+        run: curl -fsSL -o state.osm.pbf "https://download.geofabrik.de/north-america/us/${{ matrix.state }}-latest.osm.pbf"
+      - name: Import ${{ matrix.state }}
+        run: python manage.py import_pbf state.osm.pbf --elevation

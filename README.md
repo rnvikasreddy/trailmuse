@@ -68,6 +68,18 @@ Once real trails are in, unpublish the samples in the admin (filter by source = 
 
 Both commands need outbound access to `overpass-api.de` and `api.opentopodata.org`.
 
+### The whole US
+
+For whole states, use Geofabrik's OpenStreetMap extracts instead of the Overpass API:
+
+```bash
+# needs osmium-tool (apt install osmium-tool)
+curl -LO https://download.geofabrik.de/north-america/us/oregon-latest.osm.pbf
+python manage.py import_pbf oregon-latest.osm.pbf --elevation
+```
+
+`--elevation` downloads the NASA tiles the state's trails need and builds profiles as it saves. The GitHub workflow **Import trails** (Actions tab, Run workflow) does this for every state, one at a time, into the live database. It needs a repository secret `RENDER_DATABASE_URL` holding the External Database URL from Render. NASA's elevation data stops at 60°N, so most of Alaska gets trails without profiles.
+
 ## Deploy
 
 `render.yaml` is a Render Blueprint: a Docker web service with a 5 GB disk for photos, plus a Postgres database (PostGIS is enabled by the first migration).

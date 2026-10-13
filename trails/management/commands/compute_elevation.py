@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.gis.geos import Polygon
 from django.core.management.base import BaseCommand, CommandError
 
 from trails import elevation, muses
@@ -12,6 +13,7 @@ class Command(BaseCommand):
         parser.add_argument("--provider", choices=["auto", "hgt", "opentopodata"], default="auto")
         parser.add_argument("--all", action="store_true", help="redo trails that already have a profile")
         parser.add_argument("--slug", action="append", help="only these trails")
+        parser.add_argument("--bbox", help="only trails starting inside west,south,east,north")
 
     def handle(self, *args, **opts):
         hgt = elevation.HgtProvider(settings.ELEVATION_DIR)
@@ -24,6 +26,10 @@ class Command(BaseCommand):
         self.stdout.write(f"Using {provider.name}")
 
         qs = Trail.objects.exclude(geom__isnull=True)
+        if opts["bbox"]:
+            box = Polygon.from_bbox(tuple(float(x) for x in opts["bbox"].split(",")))
+            box.srid = 4326
+            qs = qs.filter(start__within=box)
         if opts["slug"]:
             qs = qs.filter(slug__in=opts["slug"])
         elif not opts["all"]:

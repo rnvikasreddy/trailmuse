@@ -125,6 +125,33 @@ class ElevationTests(TestCase):
         self.assertGreater(ridge.gain_m, 0)
 
 
+class PbfImportTests(TestCase):
+    """sample.osm is overpass_sample.json written as an OpenStreetMap file, as in a Geofabrik extract."""
+
+    def test_extract_reads_like_overpass(self):
+        from trails import pbf
+
+        a = osm.parse(pbf.read_elements(str(FIXTURES / "sample.osm")))
+        b = osm.parse(json.load(open(FIXTURES / "overpass_sample.json")))
+        self.assertEqual(sorted(t["name"] for t in a["trails"]), sorted(t["name"] for t in b["trails"]))
+        self.assertEqual(len(a["parks"]), len(b["parks"]))
+        self.assertEqual({k: len(v) for k, v in a["pois"].items()}, {k: len(v) for k, v in b["pois"].items()})
+
+    def test_import_pbf_command_with_elevation(self):
+        with tempfile.TemporaryDirectory() as d:
+            write_hgt(d, 37, -123)
+            with override_settings(ELEVATION_DIR=d):
+                out = io.StringIO()
+                call_command("import_pbf", str(FIXTURES / "sample.osm"), "--no-filter", "--elevation", stdout=out)
+                call_command("import_pbf", str(FIXTURES / "sample.osm"), "--no-filter", stdout=out)
+        self.assertEqual(Trail.objects.count(), 3)
+        self.assertIn("0 new trails, 3 updated", out.getvalue())
+        ridge = Trail.objects.filter(name="Ridge Trail", park__isnull=False).get()
+        self.assertEqual(ridge.elevation_source, "srtm-hgt")
+        self.assertTrue(ridge.profile)
+        self.assertTrue(ridge.slug)
+
+
 class ApiTests(TestCase):
     @classmethod
     def setUpTestData(cls):

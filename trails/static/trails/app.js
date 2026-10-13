@@ -247,20 +247,39 @@
   var reqId = 0;
   function loadArea() {
     var id = ++reqId;
-    // Searching by name looks across the whole region, not just the visible map.
-    var extra = state.q || state.saved ? { bbox: CFG.regionBbox.join(",") } : {};
+    // Searching by name, and the saved list, look across the whole country, not just the visible map.
+    var everywhere = !!(state.q || state.saved);
+    var extra = everywhere ? { bbox: "" } : {};
+    var fit = fitResults; fitResults = false;
     api("/api/trails?" + params(extra)).then(function (j) {
       if (id !== reqId) return;
       state.list = j.results; state.count = j.count;
       j.results.forEach(function (t) { byslug[t.slug] = t; });
       setStarts();
       if (!state.trail) renderList();
+      if (fit) fitToResults(j.results);
     }).catch(function (e) { if (e.message !== "login") toast(e.message); });
+    // Zoomed out over a whole state or more, trail lines would be a tangle (and a big download): show trailheads only.
+    if (!everywhere && map.getZoom() < LINES_MIN_ZOOM) {
+      lastLines = EMPTY;
+      if (map.getSource("lines")) map.getSource("lines").setData(EMPTY);
+      return;
+    }
     api("/api/trails/lines?" + params(Object.assign({ z: map.getZoom().toFixed(1) }, extra))).then(function (fc) {
       if (id !== reqId) return;
       lastLines = fc;
       if (map.getSource("lines")) map.getSource("lines").setData(fc);
     }).catch(function () {});
+  }
+  var LINES_MIN_ZOOM = 8, fitResults = false;
+  // After a name search, move the map to the results when none of them are in view.
+  function fitToResults(list) {
+    if (!list.length) return;
+    var bb = map.getBounds();
+    if (list.some(function (t) { return bb.contains([t.lon, t.lat]); })) return;
+    var b = new maplibregl.LngLatBounds();
+    list.slice(0, 20).forEach(function (t) { b.extend([t.lon, t.lat]); });
+    map.fitBounds(b, { padding: padding(), maxZoom: 12, duration: 700 });
   }
   function setStarts() {
     if (!map.getSource("starts")) return;
@@ -290,7 +309,7 @@
   });
   function filtersChanged() { renderFilters(); if (state.trail) closeTrail(); loadArea(); }
   var qTimer;
-  $("q").addEventListener("input", function () { var v = this.value.trim(); clearTimeout(qTimer); qTimer = setTimeout(function () { state.q = v; if (state.trail) closeTrail(); loadArea(); }, 250); });
+  $("q").addEventListener("input", function () { var v = this.value.trim(); clearTimeout(qTimer); qTimer = setTimeout(function () { state.q = v; fitResults = !!v; if (state.trail) closeTrail(); loadArea(); }, 250); });
   $("grab").onclick = function () { $("panel").classList.toggle("tall"); };
 
   // ---------------- List ----------------

@@ -1,0 +1,83 @@
+<?xml version="1.0"?><osm version="0.6">
+<node id="1" version="1" lat="37.9003" lon="-122.594"><tag k="natural" v="waterfall"/><tag k="name" v="Test Falls"/></node>
+<node id="2" version="1" lat="37.918" lon="-122.578"><tag k="natural" v="peak"/><tag k="name" v="Test Peak"/></node>
+<node id="1000000001" version="1" lat="37.88" lon="-122.62"></node>
+<node id="1000000002" version="1" lat="37.88" lon="-122.56"></node>
+<node id="1000000003" version="1" lat="37.93" lon="-122.56"></node>
+<node id="1000000004" version="1" lat="37.93" lon="-122.62"></node>
+<node id="1000000005" version="1" lat="37.9" lon="-122.6"></node>
+<node id="1000000006" version="1" lat="37.9" lon="-122.598909"></node>
+<node id="1000000007" version="1" lat="37.9" lon="-122.597818"></node>
+<node id="1000000008" version="1" lat="37.9" lon="-122.596727"></node>
+<node id="1000000009" version="1" lat="37.9" lon="-122.595636"></node>
+<node id="1000000010" version="1" lat="37.9" lon="-122.594545"></node>
+<node id="1000000011" version="1" lat="37.9" lon="-122.593455"></node>
+<node id="1000000012" version="1" lat="37.9" lon="-122.592364"></node>
+<node id="1000000013" version="1" lat="37.9" lon="-122.591273"></node>
+<node id="1000000014" version="1" lat="37.9" lon="-122.590182"></node>
+<node id="1000000015" version="1" lat="37.9" lon="-122.589091"></node>
+<node id="1000000016" version="1" lat="37.9" lon="-122.588"></node>
+<node id="1000000017" version="1" lat="37.900055" lon="-122.589091"></node>
+<node id="1000000018" version="1" lat="37.900109" lon="-122.590182"></node>
+<node id="1000000019" version="1" lat="37.900164" lon="-122.591273"></node>
+<node id="1000000020" version="1" lat="37.900218" lon="-122.592364"></node>
+<node id="1000000021" version="1" lat="37.900273" lon="-122.593455"></node>
+<node id="1000000022" version="1" lat="37.900327" lon="-122.594545"></node>
+<node id="1000000023" version="1" lat="37.900382" lon="-122.595636"></node>
+<node id="1000000024" version="1" lat="37.900436" lon="-122.596727"></node>
+<node id="1000000025" version="1" lat="37.900491" lon="-122.597818"></node>
+<node id="1000000026" version="1" lat="37.900545" lon="-122.598909"></node>
+<node id="1000000027" version="1" lat="37.9006" lon="-122.6"></node>
+<node id="1000000028" version="1" lat="37.91" lon="-122.59"></node>
+<node id="1000000029" version="1" lat="37.910444" lon="-122.589333"></node>
+<node id="1000000030" version="1" lat="37.910889" lon="-122.588667"></node>
+<node id="1000000031" version="1" lat="37.911333" lon="-122.588"></node>
+<node id="1000000032" version="1" lat="37.911778" lon="-122.587333"></node>
+<node id="1000000033" version="1" lat="37.912222" lon="-122.586667"></node>
+<node id="1000000034" version="1" lat="37.912667" lon="-122.586"></node>
+<node id="1000000035" version="1" lat="37.913111" lon="-122.585333"></node>
+<node id="1000000036" version="1" lat="37.913556" lon="-122.584667"></node>
+<node id="1000000037" version="1" lat="37.914" lon="-122.584"></node>
+<node id="1000000038" version="1" lat="37.914444" lon="-122.583333"></node>
+<node id="1000000039" version="1" lat="37.914889" lon="-122.582667"></node>
+<node id="1000000040" version="1" lat="37.915333" lon="-122.582"></node>
+<node id="1000000041" version="1" lat="37.915778" lon="-122.581333"></node>
+<node id="1000000042" version="1" lat="37.916222" lon="-122.580667"></node>
+<node id="1000000043" version="1" lat="37.916667" lon="-122.58"></node>
+<node id="1000000044" version="1" lat="37.917111" lon="-122.579333"></node>
+<node id="1000000045" version="1" lat="37.917556" lon="-122.578667"></node>
+<node id="1000000046" version="1" lat="37.918" lon="-122.578"></node>
+<node id="1000000047" version="1" lat="37.7" lon="-122.4"></node>
+<node id="1000000048" version="1" lat="37.7" lon="-122.399333"></node>
+<node id="1000000049" version="1" lat="37.7" lon="-122.398667"></node>
+<node id="1000000050" version="1" lat="37.7" lon="-122.398"></node>
+<node id="1000000051" version="1" lat="37.7" lon="-122.397333"></node>
+<node id="1000000052" version="1" lat="37.7" lon="-122.396667"></node>
+<node id="1000000053" version="1" lat="37.7" lon="-122.396"></node>
+<node id="1000000054" version="1" lat="37.7" lon="-122.395333"></node>
+<node id="1000000055" version="1" lat="37.7" lon="-122.394667"></node>
+<node id="1000000056" version="1" lat="37.7" lon="-122.394"></node>
+<node id="1000000057" version="1" lat="37.8" lon="-122.3"></node>
+<node id="1000000058" version="1" lat="37.8" lon="-122.298889"></node>
+<node id="1000000059" version="1" lat="37.8" lon="-122.297778"></node>
+<node id="1000000060" version="1" lat="37.8" lon="-122.296667"></node>
+<node id="1000000061" version="1" lat="37.8" lon="-122.295556"></node>
+<node id="1000000062" version="1" lat="37.8" lon="-122.294444"></node>
+<node id="1000000063" version="1" lat="37.8" lon="-122.293333"></node>
+<node id="1000000064" version="1" lat="37.8" lon="-122.292222"></node>
+<node id="1000000065" version="1" lat="37.8" lon="-122.291111"></node>
+<node id="1000000066" version="1" lat="37.8" lon="-122.29"></node>
+<node id="1000000067" version="1" lat="37.89" lon="-122.59"></node>
+<node id="1000000068" version="1" lat="37.89" lon="-122.5895"></node>
+<node id="1000000069" version="1" lat="37.89" lon="-122.589"></node>
+<way id="101" version="1"><nd ref="1000000005"/><nd ref="1000000006"/><nd ref="1000000007"/><nd ref="1000000008"/><nd ref="1000000009"/><nd ref="1000000010"/><nd ref="1000000011"/><nd ref="1000000012"/><nd ref="1000000013"/><nd ref="1000000014"/><nd ref="1000000015"/><nd ref="1000000016"/></way>
+<way id="101" version="1"><nd ref="1000000005"/><nd ref="1000000006"/><nd ref="1000000007"/><nd ref="1000000008"/><nd ref="1000000009"/><nd ref="1000000010"/><nd ref="1000000011"/><nd ref="1000000012"/><nd ref="1000000013"/><nd ref="1000000014"/><nd ref="1000000015"/><nd ref="1000000016"/><tag k="highway" v="path"/><tag k="name" v="Falls Path"/></way>
+<way id="102" version="1"><nd ref="1000000016"/><nd ref="1000000017"/><nd ref="1000000018"/><nd ref="1000000019"/><nd ref="1000000020"/><nd ref="1000000021"/><nd ref="1000000022"/><nd ref="1000000023"/><nd ref="1000000024"/><nd ref="1000000025"/><nd ref="1000000026"/><nd ref="1000000027"/></way>
+<way id="201" version="1"><nd ref="1000000028"/><nd ref="1000000029"/><nd ref="1000000030"/><nd ref="1000000031"/><nd ref="1000000032"/><nd ref="1000000033"/><nd ref="1000000034"/><nd ref="1000000035"/><nd ref="1000000036"/><nd ref="1000000037"/><tag k="highway" v="path"/><tag k="name" v="Ridge Trail"/><tag k="dog" v="leashed"/></way>
+<way id="202" version="1"><nd ref="1000000037"/><nd ref="1000000038"/><nd ref="1000000039"/><nd ref="1000000040"/><nd ref="1000000041"/><nd ref="1000000042"/><nd ref="1000000043"/><nd ref="1000000044"/><nd ref="1000000045"/><nd ref="1000000046"/><tag k="highway" v="path"/><tag k="name" v="Ridge Trail"/></way>
+<way id="203" version="1"><nd ref="1000000047"/><nd ref="1000000048"/><nd ref="1000000049"/><nd ref="1000000050"/><nd ref="1000000051"/><nd ref="1000000052"/><nd ref="1000000053"/><nd ref="1000000054"/><nd ref="1000000055"/><nd ref="1000000056"/><tag k="highway" v="path"/><tag k="name" v="Ridge Trail"/></way>
+<way id="300" version="1"><nd ref="1000000057"/><nd ref="1000000058"/><nd ref="1000000059"/><nd ref="1000000060"/><nd ref="1000000061"/><nd ref="1000000062"/><nd ref="1000000063"/><nd ref="1000000064"/><nd ref="1000000065"/><nd ref="1000000066"/><tag k="highway" v="footway"/><tag k="name" v="Main Street Walk"/></way>
+<way id="301" version="1"><nd ref="1000000067"/><nd ref="1000000068"/><nd ref="1000000069"/><tag k="highway" v="path"/><tag k="name" v="Tiny Spur"/></way>
+<way id="900" version="1"><nd ref="1000000001"/><nd ref="1000000002"/><nd ref="1000000003"/><nd ref="1000000004"/><nd ref="1000000001"/><tag k="leisure" v="nature_reserve"/><tag k="name" v="Test Canyon Preserve"/><tag k="website" v="https://example.org/park"/></way>
+<relation id="500" version="1"><member type="way" ref="101" role=""/><member type="way" ref="102" role=""/><tag k="route" v="hiking"/><tag k="name" v="Test Falls Loop"/><tag k="dog" v="no"/></relation>
+</osm>

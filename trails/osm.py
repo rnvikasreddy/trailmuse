@@ -143,8 +143,10 @@ def parse(data):
         elif t == "way" and tags.get("highway") in TRAIL_HIGHWAYS and tags.get("name"):
             named_ways.append({"id": el["id"], "name": tags["name"], "tags": tags, "coords": _coords(el.get("geometry"))})
 
+    park_index = RingIndex([ring for p in parks for ring in p["rings"]])
+
     def in_any_park(pt):
-        return any(point_in_ring(pt, ring) for p in parks for ring in p["rings"])
+        return park_index.contains(pt)
 
     groups = defaultdict(list)
     for w in named_ways:
@@ -170,7 +172,11 @@ def parse(data):
 
 
 def connected_components(ways, snap_m=30.0):
-    """Group ways whose endpoints touch (within snap_m)."""
+    """Group ways whose endpoints touch (within snap_m).
+
+    Endpoints are bucketed into a grid about snap_m wide, so only nearby ends are compared;
+    this keeps state-sized imports fast even for common names like "Loop Trail".
+    """
     n = len(ways)
     parent = list(range(n))
 
@@ -180,15 +186,68 @@ def connected_components(ways, snap_m=30.0):
             i = parent[i]
         return i
 
-    ends = [(w["coords"][0], w["coords"][-1]) for w in ways]
-    for i in range(n):
-        for j in range(i + 1, n):
-            if any(geo.haversine_m(a, b) <= snap_m for a in ends[i] for b in ends[j]):
-                parent[find(i)] = find(j)
+    cell = snap_m / 111_000  # degrees; a little generous in longitude away from the equator
+    grid = defaultdict(list)
+    for i, w in enumerate(ways):
+        for pt in (w["coords"][0], w["coords"][-1]):
+            grid[(int(pt[0] // cell), int(pt[1] // cell))].append((i, pt))
+    for (cx, cy), items in grid.items():
+        near = [it for dx in (-1, 0, 1) for dy in (-1, 0, 1) for it in grid.get((cx + dx, cy + dy), ())]
+        for i, a in items:
+            for j, b in near:
+                if i < j and find(i) != find(j) and geo.haversine_m(a, b) <= snap_m:
+                    parent[find(i)] = find(j)
     comps = defaultdict(list)
     for i in range(n):
         comps[find(i)].append(ways[i])
     return list(comps.values())
+
+
+class RingIndex:
+    """Point-in-polygon lookups against many rings, using a coarse grid of ring bounding boxes.
+
+    Big parks (national forests) have rings with 100k+ points, so the actual test runs in
+    GEOS on a prepared polygon, built the first time a point lands in the ring's box.
+    """
+
+    def __init__(self, rings, keys=None, cell=0.1):
+        self.cell = cell
+        self.grid = defaultdict(list)
+        for n, ring in enumerate(rings):
+            xs, ys = [p[0] for p in ring], [p[1] for p in ring]
+            box = (min(xs), min(ys), max(xs), max(ys))
+            key = keys[n] if keys else n
+            entry = [box, ring, key, None]
+            for cx in range(int(box[0] // cell), int(box[2] // cell) + 1):
+                for cy in range(int(box[1] // cell), int(box[3] // cell) + 1):
+                    self.grid[(cx, cy)].append(entry)
+
+    def containing(self, pt):
+        """Keys of the rings the point is inside."""
+        from django.contrib.gis.geos import Point, Polygon
+
+        keys = []
+        for entry in self.grid.get((int(pt[0] // self.cell), int(pt[1] // self.cell)), ()):
+            (x0, y0, x1, y1), ring, key, prepared = entry
+            if not (x0 <= pt[0] <= x1 and y0 <= pt[1] <= y1):
+                continue
+            if len(ring) < 200:
+                inside = point_in_ring(pt, ring)
+            else:
+                if prepared is None:
+                    prepared = entry[3] = Polygon(ring).prepared
+                inside = prepared.contains(Point(pt))
+            if inside:
+                keys.append(key)
+        return keys
+
+    def contains(self, pt):
+        return bool(self.containing(pt))
+
+
+def ring_area(ring):
+    """Rough ring area in square degrees; only used to compare park sizes."""
+    return abs(sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(ring, ring[1:]))) / 2
 
 
 def dogs_from_tags(tags):

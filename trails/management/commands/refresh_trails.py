@@ -2,10 +2,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
-from trails.models import Trail
-
-# Once this many real trails are in, the illustrative sample trails are hidden.
-MIN_REAL_TRAILS = 50
+from trails.importer import hide_samples_if_ready
 
 
 class Command(BaseCommand):
@@ -28,8 +25,7 @@ class Command(BaseCommand):
                     self.stderr.write(self.style.WARNING(f"  part failed: {exc}"))
         call_command("fetch_srtm", stdout=self.stdout, stderr=self.stderr)
         call_command("compute_elevation", stdout=self.stdout, stderr=self.stderr)
-        real = Trail.objects.filter(is_published=True).exclude(source="sample").count()
-        if real >= MIN_REAL_TRAILS:
-            hidden = Trail.objects.filter(source="sample", is_published=True).update(is_published=False)
+        real, hidden = hide_samples_if_ready()
+        if hidden:
             self.stdout.write(f"{real} real trails published; hid {hidden} sample trails.")
         self.stdout.write(self.style.SUCCESS("Trail refresh finished."))
