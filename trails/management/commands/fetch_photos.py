@@ -22,6 +22,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--bbox", help="only trails starting inside west,south,east,north")
         parser.add_argument("--redo", action="store_true", help="look again at trails checked before")
+        parser.add_argument("--reset", action="store_true", help="first remove all found (non-upload) photos and check every trail again")
         parser.add_argument("--max-minutes", type=float, default=0, help="stop cleanly after this long (0 = no limit)")
 
     def handle(self, *args, **opts):
@@ -37,6 +38,10 @@ class Command(BaseCommand):
         else:
             self.stdout.write("NPS_API_KEY is not set; using Wikimedia Commons only")
 
+        if opts["reset"]:
+            removed, _ = Photo.objects.exclude(source="upload").delete()
+            Trail.objects.exclude(photos_checked_at=None).update(photos_checked_at=None)
+            self.stdout.write(f"Removed {removed} found photos; checking every trail again")
         qs = Trail.objects.filter(is_published=True)
         if not opts["redo"]:
             qs = qs.filter(photos_checked_at__isnull=True)
@@ -80,7 +85,8 @@ class Command(BaseCommand):
         new, with_photos = [], 0
         for t in trails:
             chosen = list(nps_places.nearest(paths[t.id])) if nps_places else []
-            chosen += [details[title] for title in candidates[t.id] if title in details]
+            found_here = [details[title] for title in candidates[t.id] if title in details]
+            chosen += sorted(found_here, key=lambda p: not p["scenic"])  # stable: nearest scenic photos first
             if not chosen and nps_parks and t.park_id:
                 chosen = list(nps_parks.get(t.park.name.strip().lower(), []))
             picked = []
@@ -88,7 +94,7 @@ class Command(BaseCommand):
                 if p["remote_url"] not in have[t.id] and all(p["remote_url"] != q["remote_url"] for q in picked):
                     picked.append(p)
             picked = picked[: max(0, photos.PER_TRAIL - len(have[t.id]))]
-            new += [Photo(trail=t, rank=1, **p) for p in picked]
+            new += [Photo(trail=t, rank=1, **{k: v for k, v in p.items() if k != "scenic"}) for p in picked]
             with_photos += bool(picked or have[t.id])
         Photo.objects.bulk_create(new)
         Trail.objects.filter(id__in=ids).update(photos_checked_at=timezone.now())

@@ -8,8 +8,8 @@ name: Find trail photos
 on:
   workflow_dispatch:
     inputs:
-      redo:
-        description: Look again at trails that were already checked
+      reset:
+        description: Remove the photos found so far and check every trail again
         type: boolean
         default: false
 
@@ -39,4 +39,4 @@ jobs:
           sudo apt-get install -y --no-install-recommends gdal-bin libproj-dev
           pip install -r requirements.txt
       - name: Find photos (round ${{ matrix.round }})
-        run: python manage.py fetch_photos --max-minutes 330 ${{ inputs.redo && matrix.round == 1 && '--redo' || '' }}
+        run: python manage.py fetch_photos --max-minutes 330 ${{ inputs.reset && matrix.round == 1 && '--reset' || '' }}

@@ -23,6 +23,16 @@ SEARCH_RADIUS_M = 10000  # Commons' maximum
 # Whole license names only: "CC BY-NC" and "CC BY-ND" must not slip through as "CC BY".
 FREE_LICENSE = re.compile(r"(cc0( 1\.0)?|cc[ -]by(-sa)?( \d\.\d)?( [a-z]{2,3})?|public domain|pd[- ].*|attribution)", re.I)
 NOT_SCENERY = re.compile(r"\b(map|maps|sign|signs|signage|logo|diagram|plan|chart|plaque|brochure|marker|kiosk|scan|document)\b", re.I)
+# Close-ups of a species ("Mariana Swiftlet (Aerodramus bartschi)", iNaturalist's "Ficus microcarpa 451514630")
+# and photos of things (planes, cars, people, exhibits) are not views of the trail.
+SPECIES_TITLE = re.compile(r"\([A-Z][a-z]+ [a-z]+\)|^File:[A-Z][a-z]+ [a-z]+( [a-z]+)? \d{5,}")
+NOT_SCENERY_CATEGORY = re.compile(
+    r"inaturalist|taxon|species|\bbirds?\b|insects?|butterfl|moths?\b|spiders?|reptiles|amphibians|mammals|fungi|mushrooms|lichens|"
+    r"flowers?\b|plants? (by|of|in)|leaves|aircraft|airplanes|aviation|vehicles|\bcars\b|automobiles|ships|boats|buses|trains|locomotives|"
+    r"people|portraits|men\b|women\b|children|food|interiors|museum|exhibits|statues|sculptures|specimens|animals|dogs|cats|horses", re.I)
+SCENIC = re.compile(
+    r"trail|hik(e|ing)|view|vista|overlook|lookout|peak|summit|mount|mountain|falls|waterfall|lake|river|creek|canyon|ridge|valley|"
+    r"forest|woods|beach|coast|park|landscape|meadow|preserve|path|sunset|sunrise|cliff|bluff|gorge|hill|point|reserve|wilderness", re.I)
 
 
 def strip_html(text):
@@ -61,7 +71,7 @@ class Commons:
         for n in range(0, len(titles), 50):
             data = self._get({"action": "query", "titles": "|".join(titles[n: n + 50]), "prop": "imageinfo",
                               "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 1024,
-                              "iiextmetadatafilter": "LicenseShortName|Artist|ObjectName|Restrictions"})
+                              "iiextmetadatafilter": "LicenseShortName|Artist|ObjectName|Restrictions|Categories"})
             for page in data.get("query", {}).get("pages", []):
                 info = (page.get("imageinfo") or [None])[0]
                 photo = commons_photo(page.get("title", ""), info)
@@ -82,7 +92,8 @@ def commons_photo(title, info):
     if not FREE_LICENSE.fullmatch(lic) or strip_html(meta.get("Restrictions", {}).get("value")):
         return None
     name = strip_html(meta.get("ObjectName", {}).get("value")) or title.removeprefix("File:").rsplit(".", 1)[0]
-    if NOT_SCENERY.search(name) or NOT_SCENERY.search(title):
+    categories = strip_html(meta.get("Categories", {}).get("value"))
+    if NOT_SCENERY.search(name) or NOT_SCENERY.search(title) or SPECIES_TITLE.search(title) or NOT_SCENERY_CATEGORY.search(categories):
         return None
     artist = strip_html(meta.get("Artist", {}).get("value")) or "Unknown photographer"
     return {
@@ -92,6 +103,8 @@ def commons_photo(title, info):
         "credit": artist[:300],
         "license": lic[:80],
         "caption": name[:200],
+        # Photos named or filed as a landscape (a peak, falls, a view) are preferred over other nearby shots.
+        "scenic": bool(SCENIC.search(title) or SCENIC.search(categories)),
     }
 
 
@@ -150,6 +163,7 @@ def nps_photo(images, page_url, name):
             "credit": (credit or "National Park Service")[:300],
             "license": "Public domain",
             "caption": (img.get("altText") or img.get("title") or name)[:200],
+            "scenic": True,
         }
     return None
 
