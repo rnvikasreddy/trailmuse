@@ -51,14 +51,15 @@ The 16 sample trails have approximate figures and illustrative elevation profile
 ```sh
 # 1. Trails and parks from OpenStreetMap (whole Bay Area, in 0.25° tiles; takes a while)
 python manage.py import_osm
-#    or a smaller area:  python manage.py import_osm --bbox -122.7,37.8,-122.4,38.0
+#    or a smaller area:  python manage.py import_osm --bbox=-122.7,37.8,-122.4,38.0
 #    or from a saved Overpass file:  python manage.py import_osm --file bay.json
 
 # 2. Elevation profiles, gain and difficulty
+python manage.py fetch_srtm
 python manage.py compute_elevation
 ```
 
-`compute_elevation` uses SRTM tiles in `data/srtm/` when present (download `N37W122.hgt`, `N37W123.hgt`, `N38W122.hgt`, `N38W123.hgt`, `N36W122.hgt`, `N36W123.hgt` from https://dwtkns.com/srtm30m/ or NASA Earthdata) and falls back to the free OpenTopoData API otherwise.
+`fetch_srtm` downloads the NASA SRTM tiles for the region (about 150 MB, from the public AWS Terrain Tiles mirror) into `data/srtm/`, and `compute_elevation` then works offline. Without tiles it falls back to the free OpenTopoData API, which allows only about 1,000 requests a day.
 Re-running the import updates trails in place. Trails you edit in the admin and mark "Take over" (source = staff) are never overwritten.
 
 Once real trails are in, unpublish the samples in the admin (filter by source = sample, action "Unpublish").
