@@ -32,7 +32,9 @@ NOT_SCENERY_CATEGORY = re.compile(
     r"people|portraits|men\b|women\b|children|food|interiors|museum|exhibits|statues|sculptures|specimens|animals|dogs|cats|horses", re.I)
 SCENIC = re.compile(
     r"trail|hik(e|ing)|view|vista|overlook|lookout|peak|summit|mount|mountain|falls|waterfall|lake|river|creek|canyon|ridge|valley|"
-    r"forest|woods|beach|coast|park|landscape|meadow|preserve|path|sunset|sunrise|cliff|bluff|gorge|hill|point|reserve|wilderness", re.I)
+    r"forest|woods|beach|coast|park|landscape|meadow|preserve|path|sunset|sunrise|cliff|bluff|gorge|hill|point|reserve|wilderness|"
+    r"crater|volcano|island|bay|cove|dunes?|desert|glacier|spring|pond|shore|stream|scenery|nature|garden|arboretum|"
+    r"rock|arch|butte|mesa|cave|marsh|wetland|prairie|grove|redwood|pass\b|notch|bald|knob|dome|basin|bog", re.I)
 
 
 def strip_html(text):
@@ -95,6 +97,9 @@ def commons_photo(title, info):
     categories = strip_html(meta.get("Categories", {}).get("value"))
     if NOT_SCENERY.search(name) or NOT_SCENERY.search(title) or SPECIES_TITLE.search(title) or NOT_SCENERY_CATEGORY.search(categories):
         return None
+    # Only photos named or filed as a landscape (a peak, falls, a view); a hat or a speech near a trail is not the trail.
+    if not (SCENIC.search(title) or SCENIC.search(categories)):
+        return None
     artist = strip_html(meta.get("Artist", {}).get("value")) or "Unknown photographer"
     return {
         "source": "commons",
@@ -103,8 +108,7 @@ def commons_photo(title, info):
         "credit": artist[:300],
         "license": lic[:80],
         "caption": name[:200],
-        # Photos named or filed as a landscape (a peak, falls, a view) are preferred over other nearby shots.
-        "scenic": bool(SCENIC.search(title) or SCENIC.search(categories)),
+        "scenic": True,
     }
 
 

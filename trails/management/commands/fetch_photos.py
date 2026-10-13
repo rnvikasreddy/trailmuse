@@ -85,8 +85,7 @@ class Command(BaseCommand):
         new, with_photos = [], 0
         for t in trails:
             chosen = list(nps_places.nearest(paths[t.id])) if nps_places else []
-            found_here = [details[title] for title in candidates[t.id] if title in details]
-            chosen += sorted(found_here, key=lambda p: not p["scenic"])  # stable: nearest scenic photos first
+            chosen += [details[title] for title in candidates[t.id] if title in details]
             if not chosen and nps_parks and t.park_id:
                 chosen = list(nps_parks.get(t.park.name.strip().lower(), []))
             picked = []
