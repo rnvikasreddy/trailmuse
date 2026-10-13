@@ -400,7 +400,13 @@
   function gallery(t) {
     if (!t.photos.length) return '<div class="no-photos"><span>No photos yet. ' + (CFG.loggedIn ? "Be the first to add one." : '<a href="' + loginUrl() + '">Log in</a> to add the first one.') + "</span></div>";
     var ps = t.photos.slice(0, 3);
-    return '<div class="gallery' + (ps.length === 1 ? " one" : "") + '">' + ps.map(function (p) { return '<img src="' + esc(p.url) + '" alt="' + esc(p.caption || "Trail photo by " + p.by) + '" loading="lazy">'; }).join("") + "</div>";
+    // Free photos from Wikimedia Commons or the NPS must credit the photographer and license.
+    var credits = ps.filter(function (p) { return p.source !== "upload"; }).map(function (p) {
+      var who = esc(p.by) + " (" + [p.license, p.source === "nps" ? "NPS" : "Wikimedia Commons"].filter(Boolean).map(esc).join(", ") + ")";
+      return p.source_url ? '<a href="' + esc(p.source_url) + '" target="_blank" rel="noopener">' + who + "</a>" : who;
+    });
+    return '<div class="gallery' + (ps.length === 1 ? " one" : "") + '">' + ps.map(function (p) { return '<img src="' + esc(p.url) + '" alt="' + esc(p.caption || "Trail photo by " + p.by) + '" loading="lazy">'; }).join("") + "</div>" +
+      (credits.length ? '<div class="photo-credit">Photos: ' + credits.join(", ") + "</div>" : "");
   }
 
   function renderTrail(t) {

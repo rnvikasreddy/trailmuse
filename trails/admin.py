@@ -40,7 +40,9 @@ class ReviewAdmin(admin.ModelAdmin):
 
 @admin.register(Photo)
 class PhotoAdmin(admin.ModelAdmin):
-    list_display = ("trail", "user", "caption", "created_at")
+    list_display = ("trail", "source", "user", "credit", "license", "created_at")
+    list_filter = ("source",)
+    raw_id_fields = ("trail", "user")
 
 
 admin.site.register(SavedTrail)

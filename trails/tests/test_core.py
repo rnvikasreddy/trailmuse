@@ -152,6 +152,76 @@ class PbfImportTests(TestCase):
         self.assertTrue(ridge.slug)
 
 
+class FakeResponse:
+    def __init__(self, data):
+        self.data, self.status_code, self.ok = data, 200, True
+
+    def json(self):
+        return self.data
+
+    def raise_for_status(self):
+        pass
+
+
+class FakeCommons:
+    """Stands in for the Commons API: three files near the Ridge Trail, one of them not usable."""
+
+    headers = {}
+
+    def __init__(self, near):
+        self.near = near
+
+    def get(self, url, params=None, timeout=None):
+        if params.get("list") == "geosearch":
+            lon, lat = self.near
+            return FakeResponse({"query": {"geosearch": [
+                {"title": "File:Ridge view.jpg", "lat": lat, "lon": lon},
+                {"title": "File:Trail map.jpg", "lat": lat, "lon": lon},
+                {"title": "File:Far away.jpg", "lat": lat + 0.2, "lon": lon},
+            ]}})
+        info = {"mime": "image/jpeg", "width": 4000, "height": 3000, "url": "https://upload.example/x.jpg",
+                "thumburl": "https://upload.example/x-1024.jpg", "descriptionurl": "https://commons.example/File:Ridge_view.jpg",
+                "extmetadata": {"LicenseShortName": {"value": "CC BY-SA 4.0"}, "Artist": {"value": "<a href='/u'>Jo Hiker</a>"}}}
+        pages = [{"title": t, "imageinfo": [info]} for t in params["titles"].split("|")]
+        return FakeResponse({"query": {"pages": pages}})
+
+
+class PhotoTests(TestCase):
+    def test_commons_photo_checks(self):
+        from trails import photos
+
+        good = {"mime": "image/jpeg", "width": 2000, "height": 1500, "url": "u", "extmetadata": {"LicenseShortName": {"value": "CC0"}}}
+        self.assertEqual(photos.commons_photo("File:Lake.jpg", good)["license"], "CC0")
+        self.assertIsNone(photos.commons_photo("File:Lake.jpg", dict(good, width=900, height=1600)))  # portrait
+        self.assertIsNone(photos.commons_photo("File:Trailhead sign.jpg", good))
+        nc = dict(good, extmetadata={"LicenseShortName": {"value": "CC BY-NC 2.0"}})
+        self.assertIsNone(photos.commons_photo("File:Lake.jpg", nc))
+        self.assertIsNone(photos.nps_photo([{"url": "u", "credit": "© Someone"}], "", ""))
+        self.assertEqual(photos.nps_photo([{"url": "u", "credit": "NPS/Jane"}], "p", "x")["license"], "Public domain")
+
+    def test_fetch_photos_command(self):
+        from unittest import mock
+
+        from trails import photos
+        from trails.models import Photo
+
+        importer.import_parsed(osm.parse(json.load(open(FIXTURES / "overpass_sample.json"))))
+        ridge = Trail.objects.filter(name="Ridge Trail", park__isnull=False).get()
+        near = ridge.main_path()[3]
+        fake = FakeCommons(near)
+        with mock.patch.object(photos.requests, "Session", return_value=fake), mock.patch.dict(os.environ, {"NPS_API_KEY": ""}):
+            call_command("fetch_photos", stdout=io.StringIO())
+            call_command("fetch_photos", "--redo", stdout=io.StringIO())  # no duplicates on a second pass
+        got = list(ridge.photos.all())
+        self.assertEqual(len(got), 1)
+        self.assertEqual((got[0].credit, got[0].license, got[0].source), ("Jo Hiker", "CC BY-SA 4.0", "commons"))
+        self.assertEqual(got[0].url, "https://upload.example/x-1024.jpg")
+        self.assertFalse(Trail.objects.filter(photos_checked_at__isnull=True).exists())
+        detail = self.client.get(f"/api/trails/{ridge.slug}").json()
+        self.assertEqual(detail["photos"][0]["by"], "Jo Hiker")
+        self.assertEqual(Photo.objects.count(), 1)
+
+
 class ApiTests(TestCase):
     @classmethod
     def setUpTestData(cls):

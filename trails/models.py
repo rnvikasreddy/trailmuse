@@ -89,6 +89,8 @@ class Trail(models.Model):
     osm_id = models.BigIntegerField(null=True, blank=True)
     osm_tags = models.JSONField(default=dict, blank=True)
     is_published = models.BooleanField(default=True)
+    # When fetch_photos last looked for free photos of this trail.
+    photos_checked_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -167,14 +169,33 @@ def photo_path(instance, filename):
 
 
 class Photo(models.Model):
+    """A trail photo: uploaded by a hiker, or a free photo found on Wikimedia Commons or the NPS site."""
+
+    SOURCES = [("upload", "Uploaded by a hiker"), ("commons", "Wikimedia Commons"), ("nps", "National Park Service")]
+
     trail = models.ForeignKey(Trail, on_delete=models.CASCADE, related_name="photos")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="photos")
-    image = models.ImageField(upload_to=photo_path)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE, related_name="photos")
+    image = models.ImageField(upload_to=photo_path, blank=True)
     caption = models.CharField(max_length=200, blank=True)
+    source = models.CharField(max_length=10, choices=SOURCES, default="upload")
+    # Hikers' photos come first; found photos fill in until there are some.
+    rank = models.PositiveSmallIntegerField(default=0)
+    remote_url = models.URLField("image address", max_length=500, blank=True)
+    source_url = models.URLField("photo page (for credit)", max_length=500, blank=True)
+    credit = models.CharField(max_length=300, blank=True)
+    license = models.CharField(max_length=80, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["rank", "-created_at"]
+
+    @property
+    def url(self):
+        return self.image.url if self.image else self.remote_url
+
+    @property
+    def by(self):
+        return self.user.username if self.user_id else self.credit
 
 
 class SavedTrail(models.Model):

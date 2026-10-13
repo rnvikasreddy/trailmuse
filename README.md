@@ -80,6 +80,14 @@ python manage.py import_pbf oregon-latest.osm.pbf --elevation
 
 `--elevation` downloads the NASA tiles the state's trails need and builds profiles as it saves. The GitHub workflow **Import trails** (Actions tab, Run workflow) does this for every state, one at a time, into the live database. It needs a repository secret `RENDER_DATABASE_URL` holding the External Database URL from Render. NASA's elevation data stops at 60°N, so most of Alaska gets trails without profiles.
 
+## Trail photos
+
+```bash
+python manage.py fetch_photos            # Wikimedia Commons; add NPS_API_KEY for National Park Service photos
+```
+
+Attaches up to 3 free photos per trail: geotagged Wikimedia Commons photos within 250 m of the trail (free licenses only, no signs or maps), and public-domain NPS photos (free key at developer.nps.gov). Each photo keeps its photographer, license and a link back, shown under the trail's gallery. Hikers' own uploads always show first. On GitHub, run the **Find trail photos** workflow; it resumes where it stopped.
+
 ## Deploy
 
 `render.yaml` is a Render Blueprint: a Docker web service with a 5 GB disk for photos, plus a Postgres database (PostGIS is enabled by the first migration).

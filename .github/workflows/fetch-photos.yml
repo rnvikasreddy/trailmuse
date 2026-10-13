@@ -1,0 +1,42 @@
+# Attaches free trail photos from Wikimedia Commons and the National Park Service to trails in
+# the live database. Runs only when started by hand: Actions > Find trail photos > Run workflow.
+#
+# Uses the RENDER_DATABASE_URL secret, plus NPS_API_KEY (free from developer.nps.gov) if set.
+# It picks up where it left off, so running it again only checks trails it hasn't seen yet.
+name: Find trail photos
+
+on:
+  workflow_dispatch:
+    inputs:
+      redo:
+        description: Look again at trails that were already checked
+        type: boolean
+        default: false
+
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      # GitHub stops a job after 6 hours, so the work is split into back-to-back rounds.
+      max-parallel: 1
+      matrix:
+        round: [1, 2, 3, 4]
+    env:
+      DATABASE_URL: ${{ secrets.RENDER_DATABASE_URL }}
+      NPS_API_KEY: ${{ secrets.NPS_API_KEY }}
+      DEBUG: "0"
+      SECRET_KEY: photo-job-${{ github.run_id }}-not-for-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gdal-bin libproj-dev
+          pip install -r requirements.txt
+      - name: Find photos (round ${{ matrix.round }})
+        run: python manage.py fetch_photos --max-minutes 330 ${{ inputs.redo && matrix.round == 1 && '--redo' || '' }}

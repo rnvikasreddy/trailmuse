@@ -192,7 +192,7 @@ def api_photo(request, slug):
         return _bad("That file isn't a photo we can read. Use JPG, PNG or WebP.")
     img.seek(0)
     photo = Photo.objects.create(trail=trail, user=request.user, image=img, caption=(request.POST.get("caption") or "")[:200])
-    return JsonResponse({"url": photo.image.url, "caption": photo.caption, "by": request.user.username}, status=201)
+    return JsonResponse(serializers.photo(photo), status=201)
 
 
 @require_POST

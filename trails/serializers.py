@@ -25,7 +25,7 @@ def trail_summary(t, saved_ids=frozenset()):
         "avg_rating": round(t.avg_rating, 1) if getattr(t, "avg_rating", None) else None,
         "review_count": getattr(t, "review_count", 0),
         "saved": t.pk in saved_ids,
-        "photo": photo.image.url if photo else None,
+        "photo": photo.url if photo else None,
         "source": t.source,
     }
 
@@ -48,10 +48,14 @@ def trail_detail(t, user=None, saved=False):
         "muse_labels": [MUSE_LABELS.get(m, m) for m in t.muses],
         "osm_url": f"https://www.openstreetmap.org/{t.osm_type}/{t.osm_id}" if t.osm_id else "",
         "reviews": [review(r) for r in t.reviews.select_related("user")[:20]],
-        "photos": [{"url": p.image.url, "caption": p.caption, "by": p.user.username} for p in t.photos.select_related("user")[:12]],
+        "photos": [photo(p) for p in t.photos.select_related("user")[:12]],
         "my_review": review(t.reviews.filter(user=user).first()) if user and user.is_authenticated else None,
     })
     return d
+
+
+def photo(p):
+    return {"url": p.url, "caption": p.caption, "by": p.by, "source": p.source, "license": p.license, "source_url": p.source_url}
 
 
 def review(r):
