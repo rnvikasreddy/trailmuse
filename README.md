@@ -1,4 +1,6 @@
-# TrailMuse
+# Stigrr
+
+*Stigrr* comes from the Swedish *stig*, "trail" or "footpath".
 
 Find Bay Area hikes by what you're in the mood for: waterfalls, redwoods, ocean, big views, a sunset or a date hike.
 A free trail map in the style of AllTrails and Strava, built on open data.

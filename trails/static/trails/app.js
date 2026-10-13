@@ -1,4 +1,4 @@
-/* TrailMuse explore page: map, filters, trail list and trail pages. Plain JS, no build step. */
+/* Stigrr explore page: map, filters, trail list and trail pages. Plain JS, no build step. */
 (function () {
   "use strict";
   var CFG = JSON.parse(document.getElementById("app-config").textContent);
@@ -211,7 +211,7 @@
 
   function showTrail(t, fly) {
     state.trail = t; byslug[t.slug] = Object.assign(byslug[t.slug] || {}, t);
-    document.title = t.name + " · TrailMuse";
+    document.title = t.name + " · Stigrr";
     $("searchArea").hidden = true;
     renderTrail(t);
     setStarts();
@@ -227,7 +227,7 @@
   function closeTrail(push) {
     state.trail = null;
     if (map.getSource("selected")) map.getSource("selected").setData({ type: "FeatureCollection", features: [] });
-    document.title = "TrailMuse";
+    document.title = "Stigrr";
     if (push !== false) history.pushState({}, "", state.saved ? "/saved/" : "/");
     setStarts(); renderList();
     // Return the map to where the list was, so the list matches what it showed before.

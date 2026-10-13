@@ -1,4 +1,4 @@
-"""TrailMuse settings. Everything environment-specific comes from environment variables (see .env.example)."""
+"""Stigrr settings. Everything environment-specific comes from environment variables (see .env.example)."""
 import os
 from pathlib import Path
 
@@ -111,7 +111,7 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-# --- TrailMuse ---
+# --- Stigrr ---
 # Map tiles. With a MapTiler key the app uses MapTiler's outdoor style; without one it
 # falls back to OpenStreetMap's public raster tiles, which are fine for development only.
 MAPTILER_KEY = os.environ.get("MAPTILER_KEY", "")

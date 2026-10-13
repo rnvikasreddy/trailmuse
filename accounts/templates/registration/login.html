@@ -14,6 +14,6 @@
     <input type="hidden" name="next" value="{{ next|default:'/' }}">
     <button class="pill wide" type="submit">Log in</button>
   </form>
-  <p class="muted">New to TrailMuse? <a href="{% url 'signup' %}?next={{ next|urlencode }}">Create an account</a></p>
+  <p class="muted">New to Stigrr? <a href="{% url 'signup' %}?next={{ next|urlencode }}">Create an account</a></p>
 </main>
 {% endblock %}

@@ -1,4 +1,4 @@
-"""Turn OpenStreetMap data (from the Overpass API) into TrailMuse trails and parks.
+"""Turn OpenStreetMap data (from the Overpass API) into Stigrr trails and parks.
 
 The importer works on Overpass JSON with `out geom`, so every way and relation member
 carries its own coordinates and no separate node lookup is needed.
@@ -40,7 +40,7 @@ out geom tags;"""
 
 
 def fetch_overpass(url, query, timeout=300):
-    resp = requests.post(url, data={"data": query}, timeout=timeout, headers={"User-Agent": "TrailMuse importer"})
+    resp = requests.post(url, data={"data": query}, timeout=timeout, headers={"User-Agent": "Stigrr importer"})
     resp.raise_for_status()
     return resp.json()
 

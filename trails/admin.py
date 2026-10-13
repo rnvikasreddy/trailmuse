@@ -45,4 +45,4 @@ class PhotoAdmin(admin.ModelAdmin):
 
 admin.site.register(SavedTrail)
 admin.site.register(Activity, GISModelAdmin)
-admin.site.site_header = "TrailMuse admin"
+admin.site.site_header = "Stigrr admin"

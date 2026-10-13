@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>{% if page_title %}{{ page_title }} · {% endif %}TrailMuse</title>
+  <title>{% if page_title %}{{ page_title }} · {% endif %}Stigrr</title>
   <meta name="description" content="{{ page_description|default:'Find a trail for whatever you are in the mood for: waterfalls, redwoods, sunsets, a workout or a quiet escape.' }}">
   <link rel="icon" href="{% static 'trails/logo.svg' %}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,9 +13,9 @@
 </head>
 <body class="{% block body_class %}{% endblock %}">
   <header class="topbar">
-    <a class="logo" href="{% url 'explore' %}" aria-label="TrailMuse home">
+    <a class="logo" href="{% url 'explore' %}" aria-label="Stigrr home">
       <img src="{% static 'trails/logo.svg' %}" alt="" width="30" height="30">
-      <span>TrailMuse</span>
+      <span>Stigrr</span>
     </a>
     {% block search %}<div class="search-spacer"></div>{% endblock %}
     <nav class="nav">
