@@ -24,7 +24,7 @@ class HgtProvider:
     def available(self):
         return os.path.isdir(self.folder) and any(f.lower().endswith(".hgt") for f in os.listdir(self.folder))
 
-    @lru_cache(maxsize=16)
+    @lru_cache(maxsize=4)  # a 1 arc-second tile is ~26 MB; keep memory low on small servers
     def _tile(self, lat0, lon0):
         ns = "N" if lat0 >= 0 else "S"
         ew = "E" if lon0 >= 0 else "W"

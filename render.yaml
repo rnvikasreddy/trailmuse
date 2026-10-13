@@ -28,6 +28,23 @@ services:
         value: https://stigrr.com,https://www.stigrr.com
       - key: MAPTILER_KEY
         sync: false
+  # Loads real trails from OpenStreetMap and NASA elevation, then refreshes them every
+  # Tuesday. "Trigger Run" in Render runs it on demand. Billed only for the minutes it runs.
+  - type: cron
+    name: trailmuse-refresh
+    runtime: docker
+    plan: starter
+    schedule: "0 9 * * 2"
+    dockerCommand: python manage.py refresh_trails
+    envVars:
+      - key: DEBUG
+        value: "0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trailmuse-db
+          property: connectionString
 databases:
   - name: trailmuse-db
     databaseName: trailmuse

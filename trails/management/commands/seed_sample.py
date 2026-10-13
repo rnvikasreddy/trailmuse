@@ -61,7 +61,12 @@ def illustrative_profile(slug, miles, low_ft, high_ft, shape, n=80):
 class Command(BaseCommand):
     help = "Load 16 sample Bay Area trails (approximate figures) so the app works before the OSM import."
 
+    def add_arguments(self, parser):
+        parser.add_argument("--if-empty", action="store_true", help="only seed when the site has no trails at all")
+
     def handle(self, *args, **opts):
+        if opts["if_empty"] and Trail.objects.exists():
+            return
         created = 0
         for (name, park, town, lon, lat, miles, gain_ft, low, high, shape, route, diff, dogs, muse_list, why, desc) in SAMPLES:
             park_obj, _ = Park.objects.get_or_create(name=park, osm_id=None, defaults={})

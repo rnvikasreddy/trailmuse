@@ -72,7 +72,7 @@ Both commands need outbound access to `overpass-api.de` and `api.opentopodata.or
 
 `render.yaml` is a Render Blueprint: a Docker web service with a 5 GB disk for photos, plus a Postgres database (PostGIS is enabled by the first migration).
 In Render choose **New → Blueprint**, pick this repo, then set `MAPTILER_KEY`, `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` for your domain.
-Run `python manage.py seed_sample` or the import commands from the Render shell.
+The first start loads the sample trails. The `trailmuse-refresh` cron job then imports real trails and elevation every Tuesday (`python manage.py refresh_trails`); use **Trigger Run** in Render to run it right away.
 
 Any host that runs a Docker image and offers Postgres with PostGIS works the same way (Fly.io, Railway, a VPS). Settings are environment variables; see `.env.example`.
 With `DEBUG=0` the app refuses to start without a `SECRET_KEY`.

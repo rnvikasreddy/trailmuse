@@ -2,4 +2,6 @@
 # Runs on every deploy: apply database changes, then serve the site.
 set -e
 python manage.py migrate --noinput
+# A brand-new site gets the sample trails so it is never empty; refresh_trails replaces them.
+python manage.py seed_sample --if-empty
 exec gunicorn config.wsgi --bind "0.0.0.0:${PORT:-8000}" --workers "${WEB_CONCURRENCY:-3}" --timeout 60
