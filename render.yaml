@@ -48,4 +48,5 @@ services:
 databases:
   - name: trailmuse-db
     databaseName: trailmuse
-    plan: basic-256mb
+    plan: basic-1gb
+    diskSizeGB: 15  # room for every US state's trails (about 4-6 GB)
