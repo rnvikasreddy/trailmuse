@@ -115,13 +115,13 @@ def api_trail_lines(request):
     except ValueError:
         zoom = 11
     tolerance = 0.0 if zoom >= 14 else 0.00002 * 2 ** (14 - zoom)
-    qs = filtered_trails(request).select_related(None).exclude(geom__isnull=True).only("slug", "difficulty", "geom")[:1500]
+    qs = filtered_trails(request).select_related(None).exclude(geom__isnull=True).only("slug", "name", "difficulty", "geom")[:1500]
     feats = []
     for t in qs:
         g = t.geom.simplify(tolerance, preserve_topology=False) if tolerance else t.geom
         if g.empty:
             continue
-        feats.append({"type": "Feature", "properties": {"slug": t.slug, "difficulty": t.difficulty}, "geometry": json.loads(g.geojson)})
+        feats.append({"type": "Feature", "properties": {"slug": t.slug, "name": t.name, "difficulty": t.difficulty}, "geometry": json.loads(g.geojson)})
     return JsonResponse({"type": "FeatureCollection", "features": feats})
 
 

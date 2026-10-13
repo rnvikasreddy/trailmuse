@@ -36,50 +36,148 @@
   }
 
   // ---------------- Map ----------------
-  var style = CFG.maptilerKey
-    ? "https://api.maptiler.com/maps/outdoor-v2/style.json?key=" + encodeURIComponent(CFG.maptilerKey)
-    : {
-        version: 8,
-        sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19,
-          attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' } },
-        layers: [{ id: "osm", type: "raster", source: "osm" }]
-      };
+  var KEY = CFG.maptilerKey;
+  var OSM_STYLE = {
+    version: 8,
+    sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' } },
+    layers: [{ id: "osm", type: "raster", source: "osm" }]
+  };
+  function mt(name) { return "https://api.maptiler.com/maps/" + name + "/style.json?key=" + encodeURIComponent(KEY); }
+  var STYLES = KEY
+    ? [{ id: "outdoor", label: "Outdoor", url: mt("outdoor-v2") }, { id: "satellite", label: "Satellite", url: mt("hybrid") },
+       { id: "topo", label: "Topo", url: mt("topo-v2") }, { id: "winter", label: "Winter", url: mt("winter-v2") }]
+    : [{ id: "osm", label: "Map", url: OSM_STYLE }];
+  function pref(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var styleId = STYLES.some(function (s) { return s.id === pref("stigrr-style"); }) ? pref("stigrr-style") : STYLES[0].id;
+  function styleUrl(id) { return STYLES.filter(function (s) { return s.id === id; })[0].url; }
+
   var b = CFG.regionBbox;
   var map = new maplibregl.Map({
-    container: "map", style: style, bounds: [[b[0], b[1]], [b[2], b[3]]],
+    container: "map", style: styleUrl(styleId), bounds: [[b[0], b[1]], [b[2], b[3]]],
     fitBoundsOptions: { padding: padding() }, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false
   });
   map.touchZoomRotate.disableRotation();
+  map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 90 }), "bottom-right");
   function padding() { return phone() ? { top: 70, bottom: window.innerHeight * 0.5, left: 20, right: 20 } : { top: 70, bottom: 30, left: 460, right: 80 }; }
 
-  var GREEN = "#1f6f43", ORANGE = "#f2581f";
-  var hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
+  var BLUE = "#1d40b0", NAVY = "#13265f", GOLD = "#e0ac25";
+  var DIFF_COLOR = ["match", ["get", "difficulty"], "easy", "#2f9e5b", "moderate", "#e09a12", "hard", "#d64533", BLUE];
+  var EMPTY = { type: "FeatureCollection", features: [] };
+  var lastLines = EMPTY, terrainOn = false, hoverId = null;
+  var hoverPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, className: "map-tip" });
 
-  map.on("load", function () {
-    map.addSource("lines", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-    map.addSource("starts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-    map.addSource("selected", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-    map.addLayer({ id: "lines-case", type: "line", source: "lines", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 15, 7] } });
-    map.addLayer({ id: "lines", type: "line", source: "lines", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": GREEN, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1.2, 15, 3.5] } });
-    map.addLayer({ id: "selected-case", type: "line", source: "selected", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#fff", "line-width": 9 } });
-    map.addLayer({ id: "selected-line", type: "line", source: "selected", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": ORANGE, "line-width": 5 } });
-    map.addLayer({ id: "starts", type: "circle", source: "starts", paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, ["case", ["boolean", ["get", "sel"], false], 9, 5.5], 14, ["case", ["boolean", ["get", "sel"], false], 12, 9]],
-      "circle-color": ["case", ["boolean", ["get", "sel"], false], ORANGE, GREEN],
-      "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5
-    } });
-    ["starts", "lines"].forEach(function (layer) {
-      map.on("mouseenter", layer, function (e) {
-        map.getCanvas().style.cursor = "pointer";
-        var f = e.features[0], t = byslug[f.properties.slug];
-        hoverPopup.setLngLat(e.lngLat).setText(t ? t.name : f.properties.name || "").addTo(map);
-      });
-      map.on("mouseleave", layer, function () { map.getCanvas().style.cursor = ""; hoverPopup.remove(); });
-      map.on("click", layer, function (e) { hoverPopup.remove(); openTrail(e.features[0].properties.slug, true); });
-    });
-    loadArea();
-    if (state.trail) { showTrail(state.trail, true); }
+  // Our trail layers sit on top of whichever base map is chosen; they are re-added after every style switch.
+  function addTrailLayers() {
+    var glyphs = !!map.getStyle().glyphs;
+    var font = null;
+    map.getStyle().layers.some(function (l) { if (l.layout && Array.isArray(l.layout["text-font"])) { font = l.layout["text-font"]; return true; } return false; });
+    var round = { "line-cap": "round", "line-join": "round" };
+    var hover = ["boolean", ["feature-state", "hover"], false];
+
+    map.addSource("lines", { type: "geojson", data: lastLines, promoteId: "slug" });
+    map.addSource("starts", { type: "geojson", data: EMPTY, cluster: true, clusterMaxZoom: 11, clusterRadius: 44 });
+    map.addSource("selected", { type: "geojson", data: EMPTY });
+    map.addSource("selected-start", { type: "geojson", data: EMPTY });
+    if (KEY) map.addSource("terrain", { type: "raster-dem", url: "https://api.maptiler.com/tiles/terrain-rgb-v2/tiles.json?key=" + encodeURIComponent(KEY), tileSize: 256 });
+
+    map.addLayer({ id: "lines-case", type: "line", source: "lines", layout: round, paint: {
+      "line-color": "#ffffff", "line-opacity": 0.9,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 9, ["case", hover, 6, 3], 13, ["case", hover, 10, 6], 16, ["case", hover, 13, 9]] } });
+    map.addLayer({ id: "lines", type: "line", source: "lines", layout: round, paint: {
+      "line-color": DIFF_COLOR,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 9, ["case", hover, 3.5, 1.6], 13, ["case", hover, 6, 3.2], 16, ["case", hover, 8, 5]] } });
+    map.addLayer({ id: "selected-case", type: "line", source: "selected", layout: round, paint: { "line-color": NAVY, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 7, 16, 12] } });
+    map.addLayer({ id: "selected-line", type: "line", source: "selected", layout: round, paint: { "line-color": GOLD, "line-width": ["interpolate", ["linear"], ["zoom"], 9, 4, 16, 7] } });
+    if (glyphs && font) {
+      map.addLayer({ id: "line-labels", type: "symbol", source: "lines", minzoom: 12.5, layout: {
+        "symbol-placement": "line", "text-field": ["get", "name"], "text-font": font, "text-size": 12, "text-letter-spacing": 0.02, "symbol-spacing": 320
+      }, paint: { "text-color": NAVY, "text-halo-color": "#ffffff", "text-halo-width": 1.8 } });
+    }
+    map.addLayer({ id: "clusters", type: "circle", source: "starts", filter: ["has", "point_count"], paint: {
+      "circle-color": BLUE, "circle-opacity": 0.92, "circle-stroke-color": "#ffffff", "circle-stroke-width": 3,
+      "circle-radius": ["step", ["get", "point_count"], 15, 10, 19, 50, 24] } });
+    if (glyphs && font) {
+      map.addLayer({ id: "cluster-count", type: "symbol", source: "starts", filter: ["has", "point_count"], layout: {
+        "text-field": ["get", "point_count_abbreviated"], "text-font": font, "text-size": 13, "text-allow-overlap": true
+      }, paint: { "text-color": "#ffffff" } });
+    }
+    map.addLayer({ id: "starts", type: "circle", source: "starts", filter: ["!", ["has", "point_count"]], paint: {
+      "circle-color": BLUE, "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5,
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 5, 14, 8.5] } });
+    map.addLayer({ id: "selected-start", type: "circle", source: "selected-start", paint: {
+      "circle-color": GOLD, "circle-stroke-color": NAVY, "circle-stroke-width": 3, "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 8, 14, 12] } });
+    setStarts();
+    setSelected(state.trail);
+    if (terrainOn) map.setTerrain({ source: "terrain", exaggeration: 1.4 });
+  }
+
+  var first = true;
+  map.on("style.load", function () {
+    addTrailLayers();
+    if (first) { first = false; loadArea(); if (state.trail) showTrail(state.trail, true); }
   });
+
+  ["starts", "lines"].forEach(function (layer) {
+    map.on("mousemove", layer, function (e) {
+      map.getCanvas().style.cursor = "pointer";
+      var f = e.features[0], t = byslug[f.properties.slug];
+      if (layer === "lines") {
+        if (hoverId && hoverId !== f.id) map.setFeatureState({ source: "lines", id: hoverId }, { hover: false });
+        hoverId = f.id; map.setFeatureState({ source: "lines", id: hoverId }, { hover: true });
+      }
+      var name = t ? t.name : f.properties.name || "";
+      if (name) hoverPopup.setLngLat(e.lngLat).setHTML("<b>" + esc(name) + "</b>" + (t ? "<span>" + cap(t.difficulty) + " · " + t.miles + " mi</span>" : "")).addTo(map);
+    });
+    map.on("mouseleave", layer, function () {
+      map.getCanvas().style.cursor = ""; hoverPopup.remove();
+      if (hoverId) { map.setFeatureState({ source: "lines", id: hoverId }, { hover: false }); hoverId = null; }
+    });
+    map.on("click", layer, function (e) { hoverPopup.remove(); openTrail(e.features[0].properties.slug, true); });
+  });
+  map.on("click", "clusters", function (e) {
+    var f = e.features[0];
+    map.getSource("starts").getClusterExpansionZoom(f.properties.cluster_id).then(function (z) {
+      map.easeTo({ center: f.geometry.coordinates, zoom: z + 0.5, padding: padding() });
+    });
+  });
+  map.on("mouseenter", "clusters", function () { map.getCanvas().style.cursor = "pointer"; });
+  map.on("mouseleave", "clusters", function () { map.getCanvas().style.cursor = ""; });
+
+  function setSelected(t) {
+    if (!map.getSource("selected")) return;
+    map.getSource("selected").setData(t && t.geometry ? { type: "Feature", properties: {}, geometry: t.geometry } : EMPTY);
+    map.getSource("selected-start").setData(t ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [t.lon, t.lat] } } : EMPTY);
+  }
+
+  // Base map picker and 3D terrain
+  function renderLayersMenu() {
+    $("layersMenu").innerHTML = STYLES.map(function (s) {
+      return '<button type="button" role="menuitemradio" aria-checked="' + (s.id === styleId) + '" data-style="' + s.id + '">' + esc(s.label) + "</button>";
+    }).join("");
+  }
+  if (STYLES.length > 1) {
+    $("layersBtn").hidden = false;
+    renderLayersMenu();
+    $("layersBtn").onclick = function (e) { e.stopPropagation(); var m = $("layersMenu"); m.hidden = !m.hidden; this.setAttribute("aria-expanded", String(!m.hidden)); };
+    $("layersMenu").onclick = function (e) {
+      var btn = e.target.closest("[data-style]"); if (!btn) return;
+      styleId = btn.dataset.style; pref("stigrr-style", styleId); renderLayersMenu();
+      $("layersMenu").hidden = true; $("layersBtn").setAttribute("aria-expanded", "false");
+      map.setStyle(styleUrl(styleId), { diff: false });
+    };
+    document.addEventListener("click", function (e) { if (!e.target.closest("#layersMenu")) { $("layersMenu").hidden = true; $("layersBtn").setAttribute("aria-expanded", "false"); } });
+  }
+  if (KEY) {
+    $("terrainBtn").hidden = false;
+    $("terrainBtn").onclick = function () {
+      terrainOn = !terrainOn;
+      this.classList.toggle("on", terrainOn); this.setAttribute("aria-pressed", String(terrainOn));
+      if (terrainOn) { map.setTerrain({ source: "terrain", exaggeration: 1.4 }); map.dragRotate.enable(); map.easeTo({ pitch: 60, duration: 800 }); }
+      else { map.setTerrain(null); map.dragRotate.disable(); map.easeTo({ pitch: 0, bearing: 0, duration: 600 }); }
+    };
+  }
+
   var moved = false;
   map.on("moveend", function (e) { if (e.originalEvent) { moved = true; $("searchArea").hidden = !!state.trail; debounceLoad(); } });
   var loadTimer;
@@ -123,14 +221,14 @@
       if (!state.trail) renderList();
     }).catch(function (e) { if (e.message !== "login") toast(e.message); });
     api("/api/trails/lines?" + params(Object.assign({ z: map.getZoom().toFixed(1) }, extra))).then(function (fc) {
-      if (id === reqId && map.getSource("lines")) map.getSource("lines").setData(fc);
+      if (id !== reqId) return;
+      lastLines = fc;
+      if (map.getSource("lines")) map.getSource("lines").setData(fc);
     }).catch(function () {});
   }
   function setStarts() {
     if (!map.getSource("starts")) return;
-    var sel = state.trail && state.trail.slug;
-    var feats = state.list.map(function (t) { return { type: "Feature", properties: { slug: t.slug, sel: t.slug === sel }, geometry: { type: "Point", coordinates: [t.lon, t.lat] } }; });
-    if (state.trail && !byslug[sel]) feats.push({ type: "Feature", properties: { slug: sel, sel: true }, geometry: { type: "Point", coordinates: [state.trail.lon, state.trail.lat] } });
+    var feats = state.list.map(function (t) { return { type: "Feature", properties: { slug: t.slug }, geometry: { type: "Point", coordinates: [t.lon, t.lat] } }; });
     map.getSource("starts").setData({ type: "FeatureCollection", features: feats });
   }
 
@@ -215,7 +313,7 @@
     $("searchArea").hidden = true;
     renderTrail(t);
     setStarts();
-    if (map.getSource("selected")) map.getSource("selected").setData(t.geometry ? { type: "Feature", properties: {}, geometry: t.geometry } : { type: "FeatureCollection", features: [] });
+    setSelected(t);
     if (fly) {
       if (!state.listView) state.listView = { center: map.getCenter(), zoom: map.getZoom() };
       if (t.bbox) map.fitBounds([[t.bbox[0], t.bbox[1]], [t.bbox[2], t.bbox[3]]], { padding: padding(), maxZoom: 15, duration: 700 });
@@ -226,7 +324,7 @@
 
   function closeTrail(push) {
     state.trail = null;
-    if (map.getSource("selected")) map.getSource("selected").setData({ type: "FeatureCollection", features: [] });
+    setSelected(null);
     document.title = "Stigrr";
     if (push !== false) history.pushState({}, "", state.saved ? "/saved/" : "/");
     setStarts(); renderList();
