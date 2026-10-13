@@ -42,7 +42,7 @@ Run the tests with `python manage.py test trails accounts`.
 
 Without a key the map uses OpenStreetMap's public tiles, which are fine for development but not allowed for a public site.
 For the real site, make a free account at https://cloud.maptiler.com, copy the API key and set `MAPTILER_KEY`.
-The map then uses MapTiler's Outdoor style (contours, hillshade, trails). The free plan covers 100,000 map loads a month.
+The map then uses MapTiler's Outdoor style (contours, hillshade, trails). The free plan (5,000 map sessions a month) is for testing and non-commercial use; a public launch needs the Flex plan or Mapbox.
 
 ## Loading real trails
 
