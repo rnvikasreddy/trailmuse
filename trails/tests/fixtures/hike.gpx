@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="TrailMuse tests" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>Morning hike</name><trkseg>
+    <trkpt lat="37.9000" lon="-122.6000"><ele>100</ele><time>2026-05-01T08:00:00Z</time></trkpt>
+    <trkpt lat="37.9010" lon="-122.5990"><ele>120</ele><time>2026-05-01T08:02:00Z</time></trkpt>
+    <trkpt lat="37.9020" lon="-122.5980"><ele>150</ele><time>2026-05-01T08:04:00Z</time></trkpt>
+    <trkpt lat="37.9030" lon="-122.5970"><ele>140</ele><time>2026-05-01T08:06:00Z</time></trkpt>
+    <trkpt lat="37.9040" lon="-122.5960"><ele>180</ele><time>2026-05-01T08:08:00Z</time></trkpt>
+  </trkseg></trk>
+</gpx>

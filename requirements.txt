@@ -1,0 +1,8 @@
+Django==5.1.15
+psycopg[binary]>=3.2
+dj-database-url>=2.2
+gpxpy>=1.6
+Pillow>=10.4
+requests>=2.32
+gunicorn>=23.0
+whitenoise>=6.7

@@ -1,0 +1,33 @@
+# Render Blueprint: New > Blueprint in the Render dashboard, pick this repo.
+# Fill in MAPTILER_KEY and ALLOWED_HOSTS / CSRF_TRUSTED_ORIGINS after the first deploy.
+services:
+  - type: web
+    name: trailmuse
+    runtime: docker
+    plan: starter            # a persistent disk (for photos) needs a paid plan
+    healthCheckPath: /
+    disk:
+      name: media
+      mountPath: /app/media
+      sizeGB: 5
+    envVars:
+      - key: DEBUG
+        value: "0"
+      - key: SERVE_MEDIA
+        value: "1"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trailmuse-db
+          property: connectionString
+      - key: ALLOWED_HOSTS
+        value: trailmuse.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://trailmuse.onrender.com
+      - key: MAPTILER_KEY
+        sync: false
+databases:
+  - name: trailmuse-db
+    databaseName: trailmuse
+    plan: basic-256mb

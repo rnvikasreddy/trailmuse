@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% if page_title %}{{ page_title }} · {% endif %}TrailMuse</title>
+  <meta name="description" content="{{ page_description|default:'Find a trail for whatever you are in the mood for: waterfalls, redwoods, sunsets, a workout or a quiet escape.' }}">
+  <link rel="icon" href="{% static 'trails/logo.svg' %}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="{% static 'trails/app.css' %}">
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <header class="topbar">
+    <a class="logo" href="{% url 'explore' %}" aria-label="TrailMuse home">
+      <img src="{% static 'trails/logo.svg' %}" alt="" width="30" height="30">
+      <span>TrailMuse</span>
+    </a>
+    {% block search %}<div class="search-spacer"></div>{% endblock %}
+    <nav class="nav">
+      <a class="link" href="{% url 'explore' %}">Explore</a>
+      <a class="link" href="{% url 'saved' %}">Saved</a>
+      {% if user.is_authenticated %}
+        <a class="link" href="{% url 'my_hikes' %}">My hikes</a>
+        <form method="post" action="{% url 'logout' %}" class="inline">{% csrf_token %}<button class="link" type="submit">Log out</button></form>
+        <span class="avatar" title="{{ user.username }}">{{ user.username|first|upper }}</span>
+      {% else %}
+        <a class="link" href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">Log in</a>
+        <a class="pill" href="{% url 'signup' %}?next={{ request.get_full_path|urlencode }}">Sign up</a>
+      {% endif %}
+    </nav>
+  </header>
+  {% block content %}{% endblock %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

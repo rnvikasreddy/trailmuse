@@ -1,0 +1,42 @@
+{% extends "trails/base.html" %}
+{% load static %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+{% endblock %}
+{% block body_class %}map-page{% endblock %}
+{% block search %}
+<label class="search" for="q">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+  <input id="q" type="search" placeholder="Search by trail, park or city" autocomplete="off">
+</label>
+{% endblock %}
+{% block content %}
+<div id="map" aria-label="Trail map"></div>
+<div class="filters" id="filters" aria-label="Filters"></div>
+<div class="ctrls">
+  <button class="cbtn" type="button" id="zin" aria-label="Zoom in">+</button>
+  <button class="cbtn" type="button" id="zout" aria-label="Zoom out">−</button>
+  <button class="cbtn" type="button" id="locate" aria-label="Show trails near me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></button>
+</div>
+<button class="search-area" type="button" id="searchArea" hidden>Search this area</button>
+<aside class="panel" id="panel" aria-label="Trails">
+  <button class="grab" type="button" id="grab" aria-label="Expand panel"></button>
+  <div class="panel-scroll" id="panelScroll"></div>
+  <div class="cta" id="cta" hidden></div>
+</aside>
+<div class="toast" id="toast" role="status" hidden></div>
+{% csrf_token %}
+{{ initial_trail|json_script:"initial-trail" }}
+<script id="app-config" type="application/json">{
+  "maptilerKey": "{{ MAPTILER_KEY|escapejs }}",
+  "regionBbox": {{ region_bbox }},
+  "regionName": "{{ REGION_NAME|escapejs }}",
+  "loggedIn": {{ user.is_authenticated|yesno:"true,false" }},
+  "username": "{{ user.username|escapejs }}",
+  "muses": [{% for k, v in muses %}["{{ k }}", "{{ v|escapejs }}"]{% if not forloop.last %},{% endif %}{% endfor %}]
+}</script>
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="{% static 'trails/app.js' %}"></script>
+{% endblock %}

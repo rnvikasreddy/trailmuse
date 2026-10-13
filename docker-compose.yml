@@ -1,0 +1,33 @@
+# Local setup with one command:  docker compose up --build
+# Then load trails:              docker compose exec web python manage.py seed_sample
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: trailmuse
+      POSTGRES_USER: trailmuse
+      POSTGRES_PASSWORD: trailmuse
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trailmuse"]
+      interval: 3s
+      retries: 20
+  web:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgis://trailmuse:trailmuse@db:5432/trailmuse
+    ports:
+      - "8000:8000"
+    volumes:
+      - media:/app/media
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  pgdata:
+  media:

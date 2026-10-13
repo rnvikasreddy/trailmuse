@@ -1,0 +1,65 @@
+{% extends "trails/base.html" %}
+{% block body_class %}page{% endblock %}
+{% block content %}
+<main class="hikes">
+  <div class="hikes-head">
+    <div>
+      <h1>My hikes</h1>
+      <p class="muted">Upload a GPX file from your watch, Strava, AllTrails or any GPS app.</p>
+    </div>
+    <form id="gpxForm" class="upload" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label class="pill" for="gpxFile">Upload GPX</label>
+      <input id="gpxFile" name="gpx" type="file" accept=".gpx,application/gpx+xml" hidden>
+    </form>
+  </div>
+  <p id="gpxMsg" class="muted" role="status"></p>
+  <ul class="hike-list" id="hikeList">
+    {% if not activities %}
+      <li class="empty">No hikes yet. In Strava, open an activity and choose Export GPX; in AllTrails, open a recording and choose Download route. Then upload the file here.</li>
+    {% endif %}
+  </ul>
+</main>
+{{ activities|json_script:"activities-data" }}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var list = document.getElementById("hikeList");
+  var data = JSON.parse(document.getElementById("activities-data").textContent);
+  function sketch(geom) {
+    var lines = geom.type === "MultiLineString" ? geom.coordinates : [geom.coordinates];
+    var pts = [].concat.apply([], lines);
+    var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
+    var minx = Math.min.apply(null, xs), maxx = Math.max.apply(null, xs), miny = Math.min.apply(null, ys), maxy = Math.max.apply(null, ys);
+    var k = Math.cos((miny + maxy) / 2 * Math.PI / 180), w = (maxx - minx) * k || 1e-6, h = (maxy - miny) || 1e-6, s = 88 / Math.max(w, h);
+    var d = lines.map(function (l) { return l.map(function (p, i) { return (i ? "L" : "M") + (6 + (p[0] - minx) * k * s).toFixed(1) + "," + (94 - (p[1] - miny) * s).toFixed(1); }).join(""); }).join("");
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><path d="' + d + '" fill="none" stroke="#f2581f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+  }
+  function row(a) {
+    var when = a.started_at ? new Date(a.started_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "";
+    var trail = a.trail ? ' · <a href="/trail/' + a.trail.slug + '/">' + a.trail.name.replace(/</g, "&lt;") + '</a>' : "";
+    return '<li class="hike">' + sketch(a.geometry) + '<div><b>' + a.name.replace(/</g, "&lt;") + '</b><div class="muted">' + when + trail + '</div>' +
+      '<div class="hike-stats"><span>' + a.miles + ' mi</span><span>' + a.gain_ft.toLocaleString() + ' ft gain</span>' + (a.moving_minutes ? '<span>' + Math.floor(a.moving_minutes / 60) + 'h ' + (a.moving_minutes % 60) + 'm moving</span>' : '') + '</div></div></li>';
+  }
+  if (data.length) list.innerHTML = data.map(row).join("");
+  var input = document.getElementById("gpxFile"), msg = document.getElementById("gpxMsg");
+  input.addEventListener("change", function () {
+    if (!input.files.length) return;
+    var fd = new FormData(document.getElementById("gpxForm"));
+    msg.textContent = "Uploading…";
+    fetch("/api/activities/upload", { method: "POST", body: fd, headers: { "X-CSRFToken": fd.get("csrfmiddlewaretoken") } })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) { msg.textContent = res.j.error || "Upload failed."; return; }
+        msg.textContent = "Added " + res.j.name + (res.j.trail ? ", matched to " + res.j.trail.name : "") + ".";
+        if (!data.length) list.innerHTML = "";
+        data.unshift(res.j);
+        list.insertAdjacentHTML("afterbegin", row(res.j));
+      })
+      .catch(function () { msg.textContent = "Upload failed. Check your connection and try again."; })
+      .finally(function () { input.value = ""; });
+  });
+})();
+</script>
+{% endblock %}

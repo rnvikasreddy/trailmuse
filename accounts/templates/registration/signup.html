@@ -1,0 +1,21 @@
+{% extends "trails/base.html" %}
+{% block body_class %}page{% endblock %}
+{% block content %}
+<main class="auth">
+  <h1>Create your account</h1>
+  <p class="muted">It's free. Save trails, write reviews and upload your hikes.</p>
+  <form method="post" class="form">
+    {% csrf_token %}
+    {% for field in form %}
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% for err in field.errors %}<p class="error">{{ err }}</p>{% endfor %}
+      {% if field.name == "password1" %}<p class="hint">At least 8 characters, and not too common.</p>{% endif %}
+    {% endfor %}
+    {% for err in form.non_field_errors %}<p class="error">{{ err }}</p>{% endfor %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="pill wide" type="submit">Sign up</button>
+  </form>
+  <p class="muted">Already have an account? <a href="{% url 'login' %}?next={{ next|urlencode }}">Log in</a></p>
+</main>
+{% endblock %}
